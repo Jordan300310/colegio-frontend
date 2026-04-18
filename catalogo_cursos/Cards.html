@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Componentes: Cards - Catálogo de Cursos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-10">
+    <section class="max-w-7xl mx-auto space-y-6">
+        <h1 class="text-2xl font-bold uppercase mb-4">Cards de Cursos</h1>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <article class="bg-white border-2 border-black flex flex-col hover:-translate-y-1 shadow-[8px_8px_0_0_rgba(0,0,0,1)] transition-all">
+                <div class="h-40 border-b-2 border-black bg-gray-200 flex items-center justify-center text-4xl text-gray-500">
+                    <i class="fa-solid fa-laptop-code"></i>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <span class="text-xs font-bold uppercase bg-gray-200 border-2 border-black px-2 py-1 mb-3">Backend / Java</span>
+                    <h3 class="font-bold text-xl uppercase mb-3">Introducción a Java Spring</h3>
+                    <p class="text-sm text-gray-600 flex-1">Aprende a construir APIs RESTful y fundamentos de programación orientada a objetos.</p>
+                    <button class="w-full mt-4 bg-black text-white border-2 border-black py-2 text-sm font-bold uppercase hover:bg-white hover:text-black transition-colors">Ingresar al Curso</button>
+                </div>
+            </article>
+            <article class="bg-white border-2 border-black flex flex-col hover:-translate-y-1 shadow-[8px_8px_0_0_rgba(0,0,0,1)] transition-all">
+                <div class="h-40 border-b-2 border-black bg-gray-200 flex items-center justify-center text-4xl text-gray-500">
+                    <i class="fa-solid fa-code"></i>
+                </div>
+                <div class="p-5 flex-1 flex flex-col">
+                    <span class="text-xs font-bold uppercase bg-gray-200 border-2 border-black px-2 py-1 mb-3">Frontend / Web</span>
+                    <h3 class="font-bold text-xl uppercase mb-3">Fundamentos de HTML & CSS</h3>
+                    <p class="text-sm text-gray-600 flex-1">Conceptos básicos de maquetación web, estilos y diseño responsivo.</p>
+                    <button class="w-full mt-4 bg-white text-black border-2 border-black py-2 text-sm font-bold uppercase hover:bg-black hover:text-white transition-colors">Continuar Lección</button>
+                </div>
+            </article>
+        </div>
+    </section>
+</body>
+</html>

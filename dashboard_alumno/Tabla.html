@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireframe: Dashboard Alumno</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Tipografía genérica para dar aspecto de plano/borrador */
+        body {
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+
+<body class="p-4">
+    <div class="bg-white border-2 border-black overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-200 text-black border-b-2 border-black text-sm uppercase">
+                    <th class="px-6 py-4 border-r-2 border-black font-bold">Evaluación</th>
+                    <th class="px-6 py-4 border-r-2 border-black font-bold">Módulo</th>
+                    <th class="px-6 py-4 border-r-2 border-black font-bold">Nota</th>
+                    <th class="px-6 py-4 font-bold text-center">Estado</th>
+                </tr>
+            </thead>
+            <tbody class="text-sm font-bold">
+                <tr class="border-b-2 border-gray-300">
+                    <td class="px-6 py-4 border-r-2 border-gray-300">Examen Práctico 1</td>
+                    <td class="px-6 py-4 border-r-2 border-gray-300">Módulo 1</td>
+                    <td class="px-6 py-4 border-r-2 border-gray-300">19 / 20</td>
+                    <td class="px-6 py-4 text-center">[ APROBADO ]</td>
+                </tr>
+                <tr class="border-b-2 border-gray-300">
+                    <td class="px-6 py-4 border-r-2 border-gray-300">Test Control de Flujo</td>
+                    <td class="px-6 py-4 border-r-2 border-gray-300">Módulo 1</td>
+                    <td class="px-6 py-4 border-r-2 border-gray-300">18 / 20</td>
+                    <td class="px-6 py-4 text-center">[ APROBADO ]</td>
+                </tr>
+                <tr class="bg-gray-100">
+                    <td class="px-6 py-4 border-r-2 border-gray-300">Examen Endpoints</td>
+                    <td class="px-6 py-4 border-r-2 border-gray-300">Módulo 2</td>
+                    <td class="px-6 py-4 border-r-2 border-gray-300 text-gray-500">--</td>
+                    <td class="px-6 py-4 text-center text-gray-500">[ PENDIENTE ]</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
