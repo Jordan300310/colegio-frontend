@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca de Componentes: Sidebar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-10">
+    <section class="max-w-3xl mx-auto space-y-8">
+        <header>
+            <h1 class="text-3xl font-bold uppercase mb-4">Barra Lateral Reutilizable</h1>
+            <p class="text-sm text-gray-600">Estructura de menú lateral usada en dashboards y administración.</p>
+        </header>
+
+        <aside class="w-full max-w-sm bg-white border-2 border-black flex flex-col">
+            <div class="p-6 border-b-2 border-black flex items-center gap-3">
+                <div class="w-10 h-10 border-2 border-black flex items-center justify-center font-bold">L</div>
+                <div>
+                    <p class="text-sm font-bold uppercase">[ LOGO ]</p>
+                    <p class="text-xs text-gray-500 uppercase">Subtítulo</p>
+                </div>
+            </div>
+
+            <div class="p-6 flex items-center gap-4 border-b-2 border-dashed border-gray-300">
+                <div class="w-12 h-12 rounded-full border-2 border-black bg-gray-200 flex items-center justify-center">
+                    <i class="fa-regular fa-user"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-bold uppercase">[ Nombre ]</p>
+                    <p class="text-xs text-gray-600 uppercase">Perfil</p>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-6 space-y-3">
+                <a href="#"
+                    class="flex items-center gap-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold uppercase">Principal</a>
+                <a href="#"
+                    class="flex items-center gap-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">Opción
+                    1</a>
+                <a href="#"
+                    class="flex items-center gap-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">Opción
+                    2</a>
+            </nav>
+
+            <div class="p-4 border-t-2 border-black">
+                <a href="#"
+                    class="flex items-center gap-3 text-gray-600 hover:text-black px-4 py-2 uppercase font-bold">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                    Cerrar Sesión
+                </a>
+            </div>
+        </aside>
+    </section>
+</body>
+
+</html>
