@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca de Componentes: Botones</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-10">
+    <section class="max-w-4xl mx-auto space-y-8">
+        <header>
+            <h1 class="text-3xl font-bold uppercase mb-4">Botones Reutilizables</h1>
+            <p class="text-sm text-gray-600">Variantes comunes usadas en las páginas del proyecto.</p>
+        </header>
+
+        <div class="grid gap-4">
+            <button class="w-full bg-black text-white border-2 border-black py-3 font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors">Primario</button>
+            <button class="w-full bg-white text-black border-2 border-black py-3 font-bold uppercase tracking-widest hover:bg-gray-100 transition-colors">Secundario</button>
+            <button class="w-full bg-gray-200 text-black border-2 border-black py-3 font-bold uppercase tracking-widest hover:bg-gray-300 transition-colors">Tertiario</button>
+            <button class="w-full border-2 border-black text-gray-400 px-4 py-2 font-bold uppercase cursor-not-allowed">Deshabilitado</button>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+            <button class="w-full bg-black text-white border-2 border-black py-4 font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-[4px_4px_0_0_rgba(156,163,175,1)]">Wireframe</button>
+            <button class="w-full bg-white text-black border-2 border-black px-6 py-3 font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-user-plus mr-2"></i>
+                Icono + Texto
+            </button>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-3">
+            <button class="w-full border-2 border-black text-black px-4 py-3 font-bold uppercase hover:bg-black hover:text-white transition-colors">Acción pequeña</button>
+            <button class="w-full bg-black text-white border-2 border-black px-4 py-3 font-bold uppercase hover:bg-gray-800 transition-colors">Acción grande</button>
+            <button class="w-full w-12 h-12 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors"><i class="fa-solid fa-pen"></i></button>
+        </div>
+    </section>
+</body>
+</html>
