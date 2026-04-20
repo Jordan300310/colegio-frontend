@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
 @tailwind utilities;
 
 :root {
@@ -77,6 +75,12 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Courier New', Courier, monospace;
+}
+
+input,
+select,
+textarea {
+  color: var(--background);
 }
 
 h1 {
