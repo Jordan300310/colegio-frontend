@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireframe: Asignación Docente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .btn-wire:active {
+            transform: translate(4px, 4px);
+            box-shadow: none !important;
+        }
+
+        /* Custom scrollbar para la lista de secciones */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-left: 2px solid black;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: black;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-black h-screen flex overflow-hidden">
+
+    <aside class="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
+        <div class="p-6 border-b-2 border-black flex items-center space-x-3">
+            <div class="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">L</div>
+            <span class="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
+        </div>
+
+        <nav class="flex-1 px-4 space-y-4 mt-6">
+            <a href="#"
+                class="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">
+                <i class="fa-solid fa-house w-5"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#"
+                class="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">
+                <i class="fa-solid fa-users-gear w-5"></i>
+                <span>Gestión Usuarios</span>
+            </a>
+            <div class="h-0.5 bg-gray-300 w-full my-2"></div>
+            <a href="#"
+                class="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                <i class="fa-solid fa-chalkboard-user w-5"></i>
+                <span>Asignación Docente</span>
+            </a>
+            <a href="#"
+                class="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">
+                <i class="fa-solid fa-layer-group w-5"></i>
+                <span>Gestión Secciones</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+
+        <header class="md:hidden bg-white border-b-2 border-black p-4 flex justify-between items-center">
+            <span class="font-bold uppercase">[ LOGO ]</span>
+            <button class="text-black"><i class="fa-solid fa-bars text-xl"></i></button>
+        </header>
+
+        <div class="p-8 max-w-6xl mx-auto w-full pb-20">
+
+            <div class="text-xs font-bold uppercase text-gray-500 mb-6 tracking-widest">
+                <a href="#" class="hover:text-black hover:underline">Académico</a>
+                <i class="fa-solid fa-angle-right mx-2 text-black"></i>
+                <span class="text-black border-b-2 border-black">Asignación Docente</span>
+            </div>
+
+            <div class="mb-8 border-b-4 border-black pb-4">
+                <h1 class="text-3xl font-bold uppercase">Vinculación Académica</h1>
+                <p class="text-gray-600 font-bold uppercase mt-2 text-sm tracking-widest">Asignar profesores a cursos y
+                    secciones (CUS-09)</p>
+            </div>
+
+            <div class="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative">
+                <div
+                    class="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black z-10">
+                    Nueva Asignación Masiva
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-10 mt-4">
+
+                    <div>
+                        <h2
+                            class="text-lg font-bold uppercase mb-4 border-b-2 border-dashed border-gray-400 inline-block pb-1">
+                            1. Seleccionar Docente</h2>
+
+                        <div class="relative mb-6">
+                            <div
+                                class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-black">
+                                <i class="fa-solid fa-search"></i>
+                            </div>
+                            <input type="text" placeholder="BUSCAR PROFESOR..."
+                                class="w-full border-2 border-black pl-10 pr-3 py-3 font-bold uppercase text-sm outline-none focus:bg-gray-50">
+                        </div>
+
+                        <div class="bg-gray-100 border-2 border-black p-4 flex items-center space-x-4">
+                            <div
+                                class="w-12 h-12 border-2 border-black bg-white flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-chalkboard-user"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold uppercase tracking-widest text-sm">[ ING. CARLOS MENDOZA ]</p>
+                                <p class="text-xs font-bold text-gray-500 uppercase">cmendoza@colegio.edu.pe</p>
+                            </div>
+                            <button
+                                class="ml-auto text-xs font-bold uppercase border-b-2 border-black hover:text-gray-500">Cambiar</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2
+                            class="text-lg font-bold uppercase mb-4 border-b-2 border-dashed border-gray-400 inline-block pb-1">
+                            2. Asignar Secciones</h2>
+
+                        <div class="border-2 border-black bg-white h-48 overflow-y-auto custom-scroll p-0">
+                            <label
+                                class="flex items-center p-3 border-b-2 border-gray-200 hover:bg-gray-50 cursor-pointer bg-gray-100">
+                                <input type="checkbox" class="w-5 h-5 accent-black border-2 border-black mr-4" checked>
+                                <div>
+                                    <p class="font-bold uppercase text-sm">4TO "A" - JAVA SPRING BOOT</p>
+                                    <p class="text-[10px] font-bold text-gray-500 uppercase">32 Alumnos inscritos</p>
+                                </div>
+                            </label>
+
+                            <label
+                                class="flex items-center p-3 border-b-2 border-gray-200 hover:bg-gray-50 cursor-pointer bg-gray-100">
+                                <input type="checkbox" class="w-5 h-5 accent-black border-2 border-black mr-4" checked>
+                                <div>
+                                    <p class="font-bold uppercase text-sm">4TO "B" - JAVA SPRING BOOT</p>
+                                    <p class="text-[10px] font-bold text-gray-500 uppercase">28 Alumnos inscritos</p>
+                                </div>
+                            </label>
+
+                            <label
+                                class="flex items-center p-3 border-b-2 border-gray-200 hover:bg-gray-50 cursor-pointer">
+                                <input type="checkbox" class="w-5 h-5 accent-black border-2 border-black mr-4">
+                                <div>
+                                    <p class="font-bold uppercase text-sm">5TO "ÚNICA" - BASE DE DATOS</p>
+                                    <p class="text-[10px] font-bold text-gray-500 uppercase">25 Alumnos inscritos</p>
+                                </div>
+                            </label>
+
+                            <label
+                                class="flex items-center p-3 border-b-2 border-gray-200 bg-gray-50 cursor-not-allowed opacity-60">
+                                <input type="checkbox" class="w-5 h-5 border-2 border-gray-400 mr-4" disabled>
+                                <div>
+                                    <p class="font-bold uppercase text-sm text-gray-600">3RO "A" - LÓGICA DIGITAL</p>
+                                    <p class="text-[10px] font-bold text-gray-500 uppercase">Ya asignada a [ Lic. Ana R.
+                                        ]</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <p class="text-[10px] font-bold text-gray-500 uppercase mt-2 text-right">
+                            * Puede seleccionar múltiples secciones (Flujo A1).
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class="mt-8 pt-6 border-t-4 border-black text-right">
+                    <button type="button"
+                        class="bg-black text-white border-2 border-black px-8 py-3 font-bold uppercase text-sm tracking-widest hover:bg-white hover:text-black transition-colors btn-wire">
+                        Confirmar Asignación (2 Secciones) <i class="fa-solid fa-link ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-end mb-4">
+                <h2 class="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">Directorio de
+                    Asignaciones Activas</h2>
+
+                <div class="relative w-64 hidden sm:block">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-black">
+                        <i class="fa-solid fa-filter text-xs"></i>
+                    </div>
+                    <input type="text" placeholder="FILTRAR TABLA..."
+                        class="w-full border-2 border-black pl-8 pr-2 py-2 font-bold uppercase text-xs outline-none">
+                </div>
+            </div>
+
+            <div class="bg-white border-2 border-black overflow-x-auto shadow-[8px_8px_0_0_rgba(0,0,0,1)] mb-12">
+                <table class="w-full text-left border-collapse min-w-[700px]">
+                    <thead>
+                        <tr class="bg-gray-200 text-black border-b-4 border-black uppercase text-xs tracking-widest">
+                            <th class="px-6 py-4 font-bold border-r-2 border-gray-400">Docente Titular</th>
+                            <th class="px-6 py-4 font-bold border-r-2 border-gray-400">Curso / Sección Asignada</th>
+                            <th class="px-6 py-4 font-bold border-r-2 border-gray-400 text-center">Fecha Vinculación
+                            </th>
+                            <th class="px-6 py-4 font-bold text-center">Desvincular</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b-2 border-gray-300 hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 border-r-2 border-gray-300 font-bold uppercase">
+                                [ LIC. ANA RAMÍREZ ]
+                            </td>
+                            <td class="px-6 py-4 border-r-2 border-gray-300">
+                                <span class="bg-black text-white px-2 py-1 text-xs font-bold uppercase">3RO "A" - LÓGICA
+                                    DIGITAL</span>
+                            </td>
+                            <td
+                                class="px-6 py-4 border-r-2 border-gray-300 text-center text-xs font-bold text-gray-500 uppercase">
+                                01/03/2026
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button
+                                    class="w-8 h-8 border-2 border-black hover:bg-black hover:text-white transition-colors"
+                                    title="Romper Relación (A2)">
+                                    <i class="fa-solid fa-link-slash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr class="border-b-2 border-gray-300 hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 border-r-2 border-gray-300 font-bold uppercase">
+                                [ ING. CARLOS MENDOZA ]
+                            </td>
+                            <td class="px-6 py-4 border-r-2 border-gray-300">
+                                <span
+                                    class="bg-gray-200 border-2 border-black px-2 py-1 text-xs font-bold uppercase">5TO
+                                    "ÚNICA" - APIS REST</span>
+                            </td>
+                            <td
+                                class="px-6 py-4 border-r-2 border-gray-300 text-center text-xs font-bold text-gray-500 uppercase">
+                                15/03/2026
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button
+                                    class="w-8 h-8 border-2 border-black hover:bg-black hover:text-white transition-colors"
+                                    title="Romper Relación (A2)">
+                                    <i class="fa-solid fa-link-slash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+
+</html>

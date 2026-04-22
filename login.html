@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wireframe: Login y Recuperación</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Tipografía de aspecto técnico/borrador */
+        body { font-family: 'Courier New', Courier, monospace; }
+        
+        /* Efecto brutalista para botones */
+        .btn-wire:active {
+            transform: translate(4px, 4px);
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-black min-h-screen flex flex-col items-center py-12 px-4 selection:bg-black selection:text-white">
+
+    <div class="w-full max-w-4xl bg-white border-4 border-black flex flex-col md:flex-row shadow-[16px_16px_0_0_rgba(0,0,0,1)] mb-20 relative">
+        
+        <div class="absolute -top-4 -left-4 bg-black text-white px-3 py-1 text-xs font-bold uppercase border-2 border-black">
+            Estado 1: Pantalla de Acceso
+        </div>
+
+        <div class="w-full md:w-1/2 bg-gray-200 border-b-4 md:border-b-0 md:border-r-4 border-black p-10 flex flex-col justify-center items-center text-center relative overflow-hidden">
+            <i class="fa-solid fa-graduation-cap absolute -bottom-10 -left-10 text-9xl text-gray-300 opacity-50"></i>
+            
+            <div class="w-20 h-20 border-4 border-black flex items-center justify-center font-bold text-4xl bg-white mb-6 z-10">
+                L
+            </div>
+            <h1 class="text-3xl font-bold uppercase tracking-widest z-10 mb-2">[ LOGO SISTEMA ]</h1>
+            <p class="text-sm font-bold text-gray-600 uppercase z-10">Plataforma Educativa de Labor Social</p>
+            
+            <div class="mt-12 p-4 border-2 border-dashed border-gray-400 bg-gray-100 z-10 text-xs text-gray-500 font-bold uppercase text-left w-full">
+                <p><i class="fa-solid fa-circle-info mr-2"></i>Acceso exclusivo para:</p>
+                <ul class="list-disc list-inside mt-2 ml-2">
+                    <li>Alumnos Matriculados</li>
+                    <li>Plana Docente</li>
+                    <li>Administración</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="w-full md:w-1/2 p-10 flex flex-col justify-center bg-white">
+            <h2 class="text-2xl font-bold uppercase mb-2">Iniciar Sesión</h2>
+            <p class="text-xs font-bold text-gray-500 uppercase mb-8 tracking-widest border-b-2 border-gray-200 pb-4">Ingresa tus credenciales para continuar</p>
+
+            <form class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest mb-2">Correo Institucional o Usuario</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                            <i class="fa-regular fa-envelope"></i>
+                        </div>
+                        <input type="email" placeholder="ejemplo@colegio.edu.pe" class="w-full border-2 border-black pl-10 pr-3 py-3 font-bold text-sm outline-none focus:border-dashed focus:bg-gray-50 transition-colors">
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-bold uppercase tracking-widest">Contraseña</label>
+                        <a href="#recuperacion" class="text-xs font-bold uppercase border-b border-black hover:text-gray-500 transition-colors cursor-pointer">
+                            ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                            <i class="fa-solid fa-lock"></i>
+                        </div>
+                        <input type="password" placeholder="••••••••" class="w-full border-2 border-black pl-10 pr-10 py-3 font-bold text-sm outline-none focus:border-dashed focus:bg-gray-50 transition-colors">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 cursor-pointer text-gray-500 hover:text-black">
+                            <i class="fa-regular fa-eye"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="recordar" class="w-4 h-4 accent-black border-2 border-black cursor-pointer">
+                    <label for="recordar" class="ml-2 text-xs font-bold uppercase cursor-pointer">Mantener sesión iniciada</label>
+                </div>
+
+                <button type="button" class="w-full bg-black text-white border-2 border-black py-4 font-bold uppercase tracking-widest hover:bg-white hover:text-black shadow-[4px_4px_0_0_rgba(156,163,175,1)] transition-all btn-wire mt-4">
+                    Ingresar al Sistema <i class="fa-solid fa-arrow-right-to-bracket ml-2"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="w-full max-w-4xl flex items-center my-8 opacity-50">
+        <div class="flex-grow border-t-4 border-dashed border-black"></div>
+        <span class="mx-4 font-bold uppercase tracking-widest text-sm text-center">Interacción: Al hacer clic en "¿Olvidaste tu contraseña?"</span>
+        <div class="flex-grow border-t-4 border-dashed border-black"></div>
+    </div>
+
+    <div id="recuperacion" class="w-full max-w-md bg-white border-4 border-black p-8 relative shadow-[16px_16px_0_0_rgba(0,0,0,1)]">
+        
+        <div class="absolute -top-4 -right-4 bg-white text-black px-3 py-1 text-xs font-bold uppercase border-2 border-black">
+            Estado 2: Recuperación
+        </div>
+
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 border-2 border-black rounded-full flex items-center justify-center text-2xl mx-auto mb-4 bg-gray-100">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <h2 class="text-2xl font-bold uppercase mb-2">Recuperar Acceso</h2>
+            <p class="text-xs font-bold text-gray-500 uppercase leading-relaxed">
+                Ingresa tu correo electrónico registrado. Te enviaremos un enlace temporal para restablecer tu contraseña.
+            </p>
+        </div>
+
+        <form class="space-y-6">
+            <div>
+                <label class="block text-xs font-bold uppercase tracking-widest mb-2">Correo Electrónico</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                        <i class="fa-regular fa-envelope"></i>
+                    </div>
+                    <input type="email" placeholder="Ingresa tu correo..." class="w-full border-2 border-black pl-10 pr-3 py-3 font-bold text-sm outline-none focus:border-dashed focus:bg-gray-50">
+                </div>
+            </div>
+
+            <button type="button" class="w-full bg-black text-white border-2 border-black py-4 font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors btn-wire">
+                Enviar Instrucciones
+            </button>
+        </form>
+
+        <div class="mt-6 text-center border-t-2 border-gray-200 pt-4">
+            <a href="#" class="text-xs font-bold uppercase text-gray-500 hover:text-black transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Volver a Iniciar Sesión
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

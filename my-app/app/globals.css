@@ -1,0 +1,107 @@
+@import "tailwindcss";
+@tailwind utilities;
+
+:root {
+  --background: #f8fafc;
+  --foreground: #111827;
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #ec4899;
+  --secondary-foreground: #111827;
+  --accent: #14b8a6;
+  --accent-foreground: #ffffff;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --surface: #ffffff;
+  --surface-foreground: #0f172a;
+  --border: #cbd5e1;
+
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --danger: #dc2626;
+  --info: #0ea5e9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1120;
+    --foreground: #f8fafc;
+
+    --primary: #60a5fa;
+    --primary-foreground: #0f172a;
+    --secondary: #f472b6;
+    --secondary-foreground: #0f172a;
+    --accent: #5eead4;
+    --accent-foreground: #0f172a;
+
+    --muted: #111827;
+    --muted-foreground: #cbd5e1;
+    --surface: #111827;
+    --surface-foreground: #e2e8f0;
+    --border: #334155;
+
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --info: #38bdf8;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Courier New', Courier, monospace;
+}
+
+input,
+select,
+textarea {
+  color: var(--background);
+}
+
+h1 {
+  color: var(--primary);
+}
+
+.btn-wire:active {
+  transform: translate(4px, 4px);
+  box-shadow: none !important;
+}
+
+/* Custom scrollbar para la lista de secciones */
+.custom-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-left: 2px solid black;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: black;
+}
