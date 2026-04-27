@@ -5,6 +5,7 @@ import CampoSelect from '../componentes/CampoSelect'
 import CampoRadio from '../componentes/CampoRadio'
 import Etiquetas from '../componentes/Etiquetas'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
+import BarraLateral from '../componentes/BarraLateral'
 
 const columnas: TablaColumn[] = [
   { key: 'usuario', label: 'Usuario' },
@@ -76,48 +77,7 @@ const filas: TablaRow[] = [
 const page = () => {
   return (
     <>
-      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
-        <div className="p-6 border-b-2 border-black flex items-center space-x-3">
-          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">
-            L
-          </div>
-          <span className="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
-        </div>
-
-        <div className="p-6 flex items-center space-x-4 border-b-2 border-dashed border-gray-300">
-          <div className="w-10 h-10 border-2 border-black bg-gray-200 flex items-center justify-center">
-            <i className="fa-solid fa-user-tie"></i>
-          </div>
-          <div>
-            <p className="text-xs font-bold uppercase truncate">[ ADMIN ]</p>
-            <p className="text-[10px] text-gray-500 font-bold uppercase">Sistemas</p>
-          </div>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-4 mt-6">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-house w-5"></i>
-            <span>Dashboard</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-          >
-            <i className="fa-solid fa-users-gear w-5"></i>
-            <span>Gestión Usuarios</span>
-          </a>
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-file-upload w-5"></i>
-            <span>Carga Masiva</span>
-          </a>
-        </nav>
-      </aside>
+      <BarraLateral />
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50 relative">
         <div className="p-8 max-w-7xl mx-auto w-full pb-20">
@@ -182,33 +142,30 @@ const page = () => {
                 <div className="flex justify-center gap-2">
                   <button
                     title="Editar Rol/Perfil"
-                    className={`min-w-[42px] h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${
-                      rowIndex === 2
+                    className={`min-w-[42px] h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${rowIndex === 2
                         ? 'border-gray-400 text-gray-400 hover:border-black hover:text-black'
                         : 'border-black hover:bg-black hover:text-white'
-                    }`}
+                      }`}
                   >
                     Edit
                   </button>
 
                   <button
                     title={rowIndex === 2 ? 'Activar Cuenta' : 'Suspender Cuenta'}
-                    className={`min-w-[42px] h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${
-                      rowIndex === 2
+                    className={`min-w-[42px] h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${rowIndex === 2
                         ? 'border-black text-black hover:bg-black hover:text-white'
                         : 'border-black hover:bg-black hover:text-white'
-                    }`}
+                      }`}
                   >
                     {rowIndex === 2 ? 'On' : 'Off'}
                   </button>
 
                   <button
                     title="Recuperar Credenciales"
-                    className={`min-w-[42px] h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${
-                      rowIndex === 2
+                    className={`min-w-[42px] h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${rowIndex === 2
                         ? 'border-gray-400 text-gray-400 cursor-not-allowed'
                         : 'border-black hover:bg-black hover:text-white'
-                    }`}
+                      }`}
                     disabled={rowIndex === 2}
                   >
                     Key

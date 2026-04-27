@@ -2,54 +2,12 @@ import React from 'react'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import Etiquetas from '../componentes/Etiquetas'
+import BarraLateral from '../componentes/BarraLateral'
 
 const page = () => {
   return (
     <>
-      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
-        <div className="p-6 border-b-2 border-black flex items-center space-x-3">
-          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">
-            L
-          </div>
-          <span className="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-4 mt-6">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-house w-5"></i>
-            <span>Inicio</span>
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-          >
-            <i className="fa-solid fa-id-badge w-5"></i>
-            <span>Mi Perfil</span>
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-gear w-5"></i>
-            <span>Preferencias</span>
-          </a>
-        </nav>
-
-        <div className="p-4 border-t-2 border-black">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2"
-          >
-            <i className="fa-solid fa-arrow-right-from-bracket w-5"></i>
-            <span className="uppercase font-bold text-sm">Cerrar Sesión</span>
-          </a>
-        </div>
-      </aside>
+      <BarraLateral />
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
         <header className="md:hidden bg-white border-b-2 border-black p-4 flex justify-between items-center">

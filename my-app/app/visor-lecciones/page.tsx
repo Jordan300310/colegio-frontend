@@ -1,90 +1,11 @@
 import React from 'react'
 import Boton from '../componentes/Boton'
+import BarraLateral from '../componentes/BarraLateral'
 
 const page = () => {
   return (
     <>
-      <aside className="w-80 bg-gray-50 border-r-2 border-black hidden lg:flex flex-col flex-shrink-0 relative z-10">
-        <div className="p-4 border-b-2 border-black flex items-center justify-between bg-white">
-          <a href="#" className="text-sm font-bold uppercase text-black hover:underline">
-            <i className="fa-solid fa-arrow-left mr-2"></i>
-            Volver
-          </a>
-          <span className="text-xs font-bold bg-black text-white px-2 py-1 uppercase">
-            Curso
-          </span>
-        </div>
-
-        <div className="p-6 border-b-2 border-black bg-gray-200">
-          <h2 className="text-lg font-bold uppercase leading-tight text-black">
-            Introducción a Java Spring Boot
-          </h2>
-
-          <div className="mt-4 bg-white border-2 border-black h-3 w-full">
-            <div className="bg-black h-full" style={{ width: '25%' }}></div>
-          </div>
-
-          <p className="text-xs font-bold text-gray-700 mt-2 text-right uppercase">
-            25% completado
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="border-b-2 border-black">
-            <div className="p-4 bg-gray-100 flex justify-between items-center border-b-2 border-dashed border-gray-400">
-              <span className="font-bold uppercase text-sm text-black">
-                Módulo 1: Fundamentos
-              </span>
-              <i className="fa-solid fa-chevron-down text-black"></i>
-            </div>
-
-            <div className="bg-white">
-              <a
-                href="#"
-                className="flex items-center gap-3 p-3 border-b-2 border-gray-200 hover:bg-gray-50 text-gray-700"
-              >
-                <i className="fa-solid fa-circle-check text-black"></i>
-                <span className="text-sm font-bold">1. Configuración del Entorno</span>
-                <span className="ml-auto text-xs font-bold">5:20</span>
-              </a>
-
-              <a
-                href="#"
-                className="flex items-center gap-3 p-3 border-l-4 border-l-black bg-gray-100 border-b-2 border-gray-200 text-black"
-              >
-                <i className="fa-solid fa-circle-play"></i>
-                <span className="text-sm font-bold">2. Estructuras de Control</span>
-                <span className="ml-auto text-xs font-bold">12:45</span>
-              </a>
-
-              <a
-                href="#"
-                className="flex items-center gap-3 p-3 border-b-2 border-gray-200 hover:bg-gray-50 text-gray-800"
-              >
-                <i className="fa-regular fa-circle"></i>
-                <span className="text-sm font-bold">3. Programación Orientada a Objetos</span>
-                <span className="ml-auto text-xs font-bold">18:10</span>
-              </a>
-            </div>
-          </div>
-
-          <div className="border-b-2 border-black">
-            <div className="p-4 bg-gray-100 flex justify-between items-center">
-              <span className="font-bold uppercase text-sm text-gray-600">
-                Módulo 2: APIs REST
-              </span>
-              <i className="fa-solid fa-chevron-right text-gray-600"></i>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gray-50 flex justify-between items-center opacity-70">
-            <span className="font-bold uppercase text-sm text-gray-600">
-              <i className="fa-solid fa-lock mr-2"></i>
-              Examen Final
-            </span>
-          </div>
-        </div>
-      </aside>
+      <BarraLateral />
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto relative bg-white">
         <header className="lg:hidden border-b-2 border-black p-4 flex justify-between items-center bg-gray-100 sticky top-0 z-20">

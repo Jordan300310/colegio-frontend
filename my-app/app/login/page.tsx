@@ -1,8 +1,79 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import Boton from '../componentes/Boton'
-import Etiquetas from '../componentes/Etiquetas'
+import { loginSolicitud } from '../../lib/api/login/auth'
 
 const page = () => {
+  const [correo, setCorreo] = useState('')
+  const [contrasena, setContrasena] = useState('')
+  const [recordar, setRecordar] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (!correo.trim() || !contrasena.trim()) {
+      setError('Por favor completa correo y contraseña antes de continuar.')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await loginSolicitud({ correo: correo.trim(), contrasena })
+
+      console.log('[LOGIN] Respuesta de la API:', response)
+
+      // La API puede devolver los datos en la raíz o dentro de `datos`
+      const datos = response.datos ?? response
+      const token = (datos as typeof response).token ?? response.token
+      const rol = (datos as typeof response).rol ?? response.rol
+
+      if (!token) {
+        const message = response.mensaje || 'Credenciales incorrectas o cuenta inactiva.'
+        throw new Error(message)
+      }
+
+      const storage = recordar ? localStorage : sessionStorage
+      storage.setItem('token', token)
+      storage.setItem(
+        'usuario',
+        JSON.stringify({
+          id: (datos as typeof response).idUsuario ?? response.idUsuario,
+          nombres: (datos as typeof response).nombres ?? response.nombres,
+          apellidos: (datos as typeof response).apellidos ?? response.apellidos,
+          correo: (datos as typeof response).correo ?? response.correo,
+          rol,
+        }),
+      )
+
+      // Guardar en cookies para que el middleware pueda leerlas
+      const cookieOpts = `path=/; SameSite=Strict${recordar ? '; Max-Age=604800' : ''}`
+      document.cookie = `token=${token}; ${cookieOpts}`
+      document.cookie = `rol=${rol ?? ''}; ${cookieOpts}`
+
+      const rutasPorRol: Record<string, string> = {
+        ROL_ALUMNO: '/dashboard-alumno',
+        ROL_PROFESOR: '/gestion-secciones',
+        ROL_ADMIN: '/gestion-secciones',
+      }
+      const destino = rutasPorRol[rol ?? ''] ?? '/dashboard-alumno'
+
+      console.log('[LOGIN] Rol:', rol, '→ Redirigiendo a:', destino)
+
+      setSuccess('Inicio de sesión exitoso. Redirigiendo...')
+      window.location.replace(destino)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ocurrió un error al iniciar sesión.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="w-full min-h-screen bg-gray-50 overflow-y-auto">
       <div className="max-w-6xl mx-auto px-4 py-10">
@@ -20,20 +91,6 @@ const page = () => {
               Plataforma educativa de labor social
             </p>
 
-            <div className="mt-10 p-5 border-2 border-dashed border-gray-400 bg-gray-100 text-xs text-gray-800 font-bold uppercase text-left w-full max-w-md">
-              <p className="mb-3">Acceso habilitado para:</p>
-              <ul className="list-disc list-inside space-y-2">
-                <li>Alumnos matriculados</li>
-                <li>Plana docente</li>
-                <li>Administración</li>
-              </ul>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-2 justify-center">
-              <Etiquetas variant="neutral">Alumno</Etiquetas>
-              <Etiquetas variant="neutral">Docente</Etiquetas>
-              <Etiquetas variant="outline">Administrador</Etiquetas>
-            </div>
           </div>
 
           <div className="w-full lg:w-1/2 p-10 bg-white">
@@ -42,9 +99,9 @@ const page = () => {
               Ingresa tus credenciales para continuar
             </p>
 
-            <form className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6 no-validate">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
+                <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black" htmlFor="correo">
                   Correo Institucional o Usuario
                 </label>
 
@@ -54,7 +111,11 @@ const page = () => {
                   </div>
 
                   <input
+                    id="correo"
+                    name="correo"
                     type="email"
+                    value={correo}
+                    onChange={(event) => setCorreo(event.target.value)}
                     placeholder="ejemplo@colegio.edu.pe"
                     className="w-full border-2 border-black pl-10 pr-3 py-3 font-bold text-sm outline-none focus:border-dashed focus:bg-gray-50 transition-colors text-black placeholder:text-gray-500"
                   />
@@ -63,7 +124,7 @@ const page = () => {
 
               <div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-2">
-                  <label className="block text-xs font-bold uppercase tracking-widest text-black">
+                  <label className="block text-xs font-bold uppercase tracking-widest text-black" htmlFor="contrasena">
                     Contraseña
                   </label>
 
@@ -81,7 +142,11 @@ const page = () => {
                   </div>
 
                   <input
+                    id="contrasena"
+                    name="contrasena"
                     type="password"
+                    value={contrasena}
+                    onChange={(event) => setContrasena(event.target.value)}
                     placeholder="••••••••"
                     className="w-full border-2 border-black pl-10 pr-10 py-3 font-bold text-sm outline-none focus:border-dashed focus:bg-gray-50 transition-colors text-black placeholder:text-gray-500"
                   />
@@ -102,8 +167,10 @@ const page = () => {
 
               <div className="flex items-center gap-2">
                 <input
-                  type="checkbox"
                   id="recordar"
+                  type="checkbox"
+                  checked={recordar}
+                  onChange={(event) => setRecordar(event.target.checked)}
                   className="w-4 h-4 accent-black border-2 border-black cursor-pointer"
                 />
                 <label
@@ -114,73 +181,18 @@ const page = () => {
                 </label>
               </div>
 
-              <Boton variant="wire" size="lg" fullWidth>
-                Ingresar al Sistema
-              </Boton>
+              {error ? (
+                <p className="text-sm font-bold uppercase text-red-700">{error}</p>
+              ) : null}
 
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 p-4">
-                <p className="text-[10px] font-bold uppercase text-gray-700 mb-2">
-                  Validaciones esperadas
-                </p>
-                <ul className="space-y-1 text-xs font-bold uppercase text-gray-800">
-                  <li>• No permitir campos vacíos.</li>
-                  <li>• Verificar credenciales registradas.</li>
-                  <li>• Bloquear acceso si la cuenta está inactiva.</li>
-                </ul>
-              </div>
-            </form>
-          </div>
-        </div>
+              {success ? (
+                <p className="text-sm font-bold uppercase text-green-700">{success}</p>
+              ) : null}
 
-        <div id="recuperacion" className="max-w-4xl mx-auto mt-12">
-          <div className="bg-white border-4 border-black p-8 shadow-[16px_16px_0_0_rgba(0,0,0,1)]">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 border-2 border-black rounded-full flex items-center justify-center text-2xl mx-auto mb-4 bg-gray-100">
-                🔑
-              </div>
-
-              <h2 className="text-2xl font-bold uppercase mb-2 text-black">
-                Recuperar Acceso
-              </h2>
-
-              <p className="text-xs font-bold text-gray-700 uppercase leading-relaxed max-w-2xl mx-auto">
-                Ingresa tu correo registrado. El sistema enviará un enlace temporal para
-                restablecer tu contraseña y recuperar el acceso a la plataforma.
-              </p>
-            </div>
-
-            <form className="space-y-6 max-w-3xl mx-auto">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
-                  Correo Electrónico Registrado
-                </label>
-
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-600">
-                    <i className="fa-regular fa-envelope"></i>
-                  </div>
-
-                  <input
-                    type="email"
-                    placeholder="ejemplo@colegio.edu.pe"
-                    className="w-full border-2 border-black pl-10 pr-3 py-3 font-bold text-sm outline-none focus:border-dashed focus:bg-gray-50 transition-colors text-black placeholder:text-gray-500"
-                  />
-                </div>
-              </div>
-
-              <Boton variant="primary" size="lg" fullWidth>
-                Enviar Instrucciones
+              <Boton type="submit" variant="wire" size="lg" fullWidth disabled={loading}>
+                {loading ? 'Validando...' : 'Ingresar al Sistema'}
               </Boton>
             </form>
-
-            <div className="mt-6 border-t-2 border-gray-200 pt-4 text-center">
-              <a
-                href="#"
-                className="text-xs font-bold uppercase text-gray-700 hover:text-black transition-colors inline-flex items-center"
-              >
-                <span className="mr-2">←</span> Volver a Iniciar Sesión
-              </a>
-            </div>
           </div>
         </div>
       </div>
