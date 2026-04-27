@@ -10,26 +10,26 @@ interface NavItem {
 
 const NAV_POR_ROL: Record<string, NavItem[]> = {
     ROL_ALUMNO: [
+        { href: '/perfil', label: 'Perfil' },
         { href: '/dashboard-alumno', label: 'Dashboard' },
         { href: '/catalogo-cursos', label: 'Catálogo de Cursos' },
         { href: '/visor-lecciones', label: 'Visor de Lecciones' },
         { href: '/sala-evaluacion', label: 'Sala de Evaluación' },
-        { href: '/perfil', label: 'Perfil' },
     ],
     ROL_PROFESOR: [
+        { href: '/perfil', label: 'Perfil' },
         { href: '/avance-grupal', label: 'Avance Grupal' },
         { href: '/progreso-individual', label: 'Progreso Individual' },
         { href: '/generador-reportes', label: 'Generador de Reportes' },
-        { href: '/perfil', label: 'Perfil' },
     ],
     ROL_ADMIN: [
+        { href: '/perfil', label: 'Perfil' },
         { href: '/gestion-usuarios', label: 'Gestión de Usuarios' },
         { href: '/registro-usuarios', label: 'Registro de Usuarios' },
         { href: '/carga-masiva', label: 'Carga Masiva' },
         { href: '/gestion-secciones', label: 'Gestión de Secciones' },
         { href: '/asignacion-docente', label: 'Asignación Docente' },
         { href: '/generador-reportes', label: 'Generador de Reportes' },
-        { href: '/perfil', label: 'Perfil' },
     ],
 }
 
