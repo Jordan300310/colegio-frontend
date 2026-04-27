@@ -1,178 +1,256 @@
 import React from 'react'
+import Boton from '../componentes/Boton'
+import CampoTexto from '../componentes/CampoTexto'
+import CampoSelect from '../componentes/CampoSelect'
+import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
+import Etiquetas from '../componentes/Etiquetas'
+
+const columnas: TablaColumn[] = [
+  { key: 'seccion', label: 'Sección' },
+  { key: 'anio', label: 'Año Escolar', className: 'text-center' },
+  { key: 'curso', label: 'Curso' },
+  { key: 'docente', label: 'Docente' },
+  { key: 'alumnos', label: 'Alumnos', className: 'text-center' },
+  { key: 'estado', label: 'Estado', className: 'text-center' },
+]
+
+const filas: TablaRow[] = [
+  {
+    id: 1,
+    seccion: <span className="font-bold uppercase">Taller de Programación - A</span>,
+    anio: <span className="font-bold">2026</span>,
+    curso: 'Lógica Digital',
+    docente: 'Lic. Ana Ramírez',
+    alumnos: <span className="font-bold">28</span>,
+    estado: <Etiquetas variant="success">Activa</Etiquetas>,
+  },
+  {
+    id: 2,
+    seccion: <span className="font-bold uppercase">Taller de Programación - B</span>,
+    anio: <span className="font-bold">2026</span>,
+    curso: 'APIs REST',
+    docente: 'Ing. Carlos Mendoza',
+    alumnos: <span className="font-bold">25</span>,
+    estado: <Etiquetas variant="success">Activa</Etiquetas>,
+  },
+  {
+    id: 3,
+    seccion: <span className="font-bold uppercase">Base de Datos - C</span>,
+    anio: <span className="font-bold">2026</span>,
+    curso: 'Base de Datos',
+    docente: 'Sin asignar',
+    alumnos: <span className="font-bold">0</span>,
+    estado: <Etiquetas variant="warning">Sin alumnos</Etiquetas>,
+  },
+]
 
 const page = () => {
-    return (
-        <>
-            <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
-                <div className="p-6 border-b-2 border-black flex items-center space-x-3">
-                    <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">L</div>
-                    <span className="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
+  return (
+    <>
+      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
+        <div className="p-6 border-b-2 border-black flex items-center space-x-3">
+          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">
+            L
+          </div>
+          <span className="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-4 mt-6">
+          <a
+            href="#"
+            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
+          >
+            <i className="fa-solid fa-house w-5"></i>
+            <span>Dashboard</span>
+          </a>
+
+          <a
+            href="#"
+            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
+          >
+            <i className="fa-solid fa-users-gear w-5"></i>
+            <span>Gestión Usuarios</span>
+          </a>
+
+          <a
+            href="#"
+            className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
+          >
+            <i className="fa-solid fa-layer-group w-5"></i>
+            <span>Gestión Secciones</span>
+          </a>
+        </nav>
+      </aside>
+
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+        <header className="md:hidden bg-white border-b-2 border-black p-4 flex justify-between items-center">
+          <span className="font-bold uppercase">[ LOGO ]</span>
+          <button className="text-black">
+            <i className="fa-solid fa-bars text-xl"></i>
+          </button>
+        </header>
+
+        <div className="p-8 max-w-6xl mx-auto w-full pb-20">
+          <div className="text-xs font-bold uppercase text-gray-500 mb-6 tracking-widest">
+            <a href="#" className="hover:text-black hover:underline">
+              Académico
+            </a>
+            <i className="fa-solid fa-angle-right mx-2 text-black"></i>
+            <span className="text-black border-b-2 border-black">Gestión Secciones</span>
+          </div>
+
+          <div className="mb-8 border-b-4 border-black pb-4">
+            <h1 className="text-3xl font-bold uppercase">Gestión de Secciones</h1>
+            <p className="text-gray-600 font-bold uppercase mt-2 text-sm tracking-widest">
+              Crear grupos y vincular alumnos a un año escolar
+            </p>
+          </div>
+
+          <div className="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative">
+            <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black z-10">
+              Crear Nueva Sección
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+              <CampoTexto
+                field={{
+                  type: 'text',
+                  name: 'nombreGrupo',
+                  label: 'Nombre del Grupo',
+                  placeholder: 'Ej: Taller de Programación - A',
+                }}
+              />
+
+              <CampoTexto
+                field={{
+                  type: 'number',
+                  name: 'anioEscolar',
+                  label: 'Año Escolar',
+                  placeholder: 'Ej: 2026',
+                }}
+              />
+
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'curso',
+                  label: 'Curso',
+                  options: ['Lógica Digital', 'APIs REST', 'Base de Datos'],
+                }}
+              />
+            </div>
+
+            <div className="mt-8 pt-6 border-t-4 border-black text-right">
+              <Boton
+                variant="primary"
+                size="md"
+                icon={<span className="text-sm">＋</span>}
+              >
+                Crear Nueva Sección
+              </Boton>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-end mb-4 gap-4">
+            <h2 className="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">
+              Secciones Disponibles
+            </h2>
+
+            <div className="w-64 hidden sm:block">
+              <CampoTexto
+                field={{
+                  type: 'search',
+                  name: 'filtrar',
+                  label: 'Buscar Sección',
+                  placeholder: 'BUSCAR SECCIÓN...',
+                  icon: 'fa-solid fa-filter',
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white border-2 border-black overflow-x-auto shadow-[8px_8px_0_0_rgba(0,0,0,1)] mb-12">
+            <Tabla
+              columns={columnas}
+              rows={filas}
+              renderAction={(row) => (
+                <div className="flex justify-center gap-2">
+                  <button
+                    title="Vincular alumnos"
+                    className="min-w-[52px] h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase"
+                  >
+                    Vinc
+                  </button>
+
+                  <button
+                    title="Editar sección"
+                    className="min-w-[52px] h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase"
+                  >
+                    Edit
+                  </button>
                 </div>
+              )}
+              className="max-w-none mx-0 space-y-0"
+            />
+          </div>
 
-                <nav className="flex-1 px-4 space-y-4 mt-6">
-                    <a href="#"
-                        className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">
-                        <i className="fa-solid fa-house w-5"></i>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="#"
-                        className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400">
-                        <i className="fa-solid fa-users-gear w-5"></i>
-                        <span>Gestión Usuarios</span>
-                    </a>
-                    <a href="#"
-                        className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-                        <i className="fa-solid fa-file-upload w-5"></i>
-                        <span>Carga Masiva</span>
-                    </a>
-                </nav>
-            </aside>
+          <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative">
+            <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black">
+              Vincular Alumnos
+            </div>
 
-            <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'seccionVincular',
+                  label: 'Seleccionar Sección',
+                  options: [
+                    'Taller de Programación - A',
+                    'Taller de Programación - B',
+                    'Base de Datos - C',
+                  ],
+                }}
+              />
 
-                <header className="md:hidden bg-white border-b-2 border-black p-4 flex justify-between items-center">
-                    <span className="font-bold uppercase">[ LOGO ]</span>
-                    <button className="text-black"><i className="fa-solid fa-bars text-xl"></i></button>
-                </header>
+              <CampoTexto
+                field={{
+                  type: 'search',
+                  name: 'buscarAlumno',
+                  label: 'Buscar Alumno',
+                  placeholder: 'BUSCAR ALUMNO SIN SECCIÓN...',
+                  icon: 'fa-solid fa-search',
+                }}
+              />
+            </div>
 
-                <div className="p-8 max-w-7xl mx-auto w-full pb-20">
-
-                    <div className="text-xs font-bold uppercase text-gray-500 mb-6 tracking-widest">
-                        <a href="#" className="hover:text-black hover:underline">Administración</a>
-                        <i className="fa-solid fa-angle-right mx-2 text-black"></i>
-                        <span className="text-black border-b-2 border-black">Carga Masiva</span>
-                    </div>
-
-                    <div className="mb-8 border-b-4 border-black pb-4">
-                        <h1 className="text-3xl font-bold uppercase">Carga Masiva de Alumnos</h1>
-                        <p className="text-gray-600 font-bold uppercase mt-2 text-sm tracking-widest">Importación de registros
-                            mediante Excel/CSV (CUS-07)</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-
-                        <div className="flex flex-col gap-6">
-
-                            <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-                                <h2 className="text-lg font-bold uppercase mb-2">Paso 1: Descargar Plantilla</h2>
-                                <p className="text-xs font-bold text-gray-500 uppercase mb-4 leading-relaxed">
-                                    Asegúrese de utilizar el formato oficial. Las columnas obligatorias son: Nombres, Apellidos,
-                                    Correo y Rol.
-                                </p>
-                                <button
-                                    className="w-full sm:w-auto bg-white text-black border-2 border-black px-6 py-2 font-bold uppercase text-sm hover:bg-gray-100 flex items-center justify-center transition-colors">
-                                    <i className="fa-solid fa-download mr-2"></i> Plantilla_Alumnos.xlsx
-                                </button>
-                            </div>
-
-                            <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-                                <h2 className="text-lg font-bold uppercase mb-4">Paso 2: Subir Archivo</h2>
-
-                                <div
-                                    className="dropzone border-4 border-dashed border-gray-400 bg-gray-50 hover:bg-gray-100 hover:border-black transition-all cursor-pointer flex flex-col items-center justify-center p-12 text-center group mb-4">
-                                    <i className="fa-solid fa-file-csv text-6xl text-gray-400 group-hover:text-black mb-4"></i>
-                                    <p className="font-bold uppercase text-lg mb-1">Arrastre su archivo aquí</p>
-                                    <p className="text-xs font-bold text-gray-500 uppercase">O haga clic para examinar su equipo</p>
-                                    <div className="mt-6 flex gap-2">
-                                        <span
-                                            className="bg-gray-200 border border-gray-400 text-gray-600 px-2 py-1 text-[10px] font-bold uppercase">.XLSX</span>
-                                        <span
-                                            className="bg-gray-200 border border-gray-400 text-gray-600 px-2 py-1 text-[10px] font-bold uppercase">.CSV</span>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-200 border-2 border-black p-3 flex justify-between items-center mb-6">
-                                    <div className="flex items-center">
-                                        <i className="fa-solid fa-file-excel mr-3 text-xl"></i>
-                                        <div>
-                                            <p className="font-bold text-sm uppercase truncate max-wxs">nuevos_ingresos_2026.xlsx
-                                            </p>
-                                            <p className="text-xs text-gray-600 font-bold uppercase">45 KB</p>
-                                        </div>
-                                    </div>
-                                    <button className="text-gray-500 hover:text-black"><i className="fa-solid fa-trash"></i></button>
-                                </div>
-
-                                <button
-                                    className="w-full bg-black text-white border-2 border-black py-4 font-bold uppercase text-sm tracking-widest hover:bg-gray-800 transition-colors btn-wire shadow-[4px_4px_0_0_rgba(156,163,175,1)] flex items-center justify-center">
-                                    <i className="fa-solid fa-gears mr-2"></i> Procesar Archivo
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-100 border-4 border-black p-6 relative">
-                            <div
-                                className="absolute -top-4 -right-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black z-10">
-                                Log de Procesamiento
-                            </div>
-
-                            <h2 className="text-xl font-bold uppercase mb-2 border-b-2 border-black pb-2">Reporte de Carga</h2>
-                            <p className="text-xs font-bold text-gray-500 uppercase mb-6">Archivo: nuevos_ingresos_2026.xlsx |
-                                Procesado a las 14:32 hrs.</p>
-
-                            <div className="grid grid-cols-3 gap-4 mb-6">
-                                <div className="bg-white border-2 border-black p-3 text-center">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Filas Leídas</p>
-                                    <p className="text-2xl font-bold">120</p>
-                                </div>
-                                <div className="bg-white border-2 border-black border-b-4 p-3 text-center">
-                                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Registrados</p>
-                                    <p className="text-2xl font-bold">118</p>
-                                </div>
-                                <div className="bg-black text-white border-2 border-black p-3 text-center relative overflow-hidden">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Errores</p>
-                                    <p className="text-2xl font-bold relative z-10">2</p>
-                                </div>
-                            </div>
-
-                            <div className="bg-white border-2 border-dashed border-gray-400 p-4 mb-6 text-center">
-                                <p className="font-bold uppercase text-sm mb-2"><i className="fa-solid fa-circle-check mr-1"></i> 118
-                                    usuarios creados con éxito.</p>
-                                <p className="text-xs text-gray-500 font-bold uppercase mb-4">Las credenciales temporales han sido
-                                    generadas (CUS-06).</p>
-                                <button
-                                    className="bg-white text-black border-2 border-black px-4 py-2 font-bold uppercase text-xs hover:bg-gray-100 transition-colors inline-flex items-center">
-                                    <i className="fa-solid fa-file-pdf mr-2"></i> Descargar Credenciales
-                                </button>
-                            </div>
-
-                            <h3 className="font-bold uppercase text-sm mb-3 bg-black text-white inline-block px-2 py-1">Detalle de
-                                Errores (2)</h3>
-                            <div className="bg-white border-2 border-black overflow-hidden">
-                                <table className="w-full text-left text-xs uppercase font-bold">
-                                    <thead>
-                                        <tr className="bg-gray-200 border-b-2 border-black">
-                                            <th className="p-2 border-r-2 border-black text-center w-12">Fila</th>
-                                            <th className="p-2 border-r-2 border-black">Dato Afectado</th>
-                                            <th className="p-2">Motivo del Rechazo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr className="border-b-2 border-gray-300">
-                                            <td className="p-2 border-r-2 border-gray-300 text-center">45</td>
-                                            <td className="p-2 border-r-2 border-gray-300">jlopez@colegio.edu.pe</td>
-                                            <td className="p-2 text-gray-600">Correo Electrónico Duplicado.</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="p-2 border-r-2 border-gray-300 text-center">112</td>
-                                            <td className="p-2 border-r-2 border-gray-300">[ Celda Vacía ]</td>
-                                            <td className="p-2 text-gray-600">Falta el campo obligatorio: Nombres.</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <p className="text-[10px] font-bold text-gray-500 uppercase mt-4 text-center">
-                                Corrija los errores en su archivo local y vuelva a subir únicamente las filas rechazadas.
-                            </p>
-
-                        </div>
-                    </div>
-
+            <div className="mt-6 bg-gray-50 border-2 border-dashed border-gray-400 p-4">
+              <p className="text-xs font-bold uppercase text-gray-600 mb-2">
+                Alumnos disponibles para vincular
+              </p>
+              <div className="space-y-2">
+                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm">
+                  [ ALUMNO 1 ] - alumno1@colegio.edu.pe
                 </div>
-            </main>
-        </>
-    )
+                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm">
+                  [ ALUMNO 2 ] - alumno2@colegio.edu.pe
+                </div>
+                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm">
+                  [ ALUMNO 3 ] - alumno3@colegio.edu.pe
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t-4 border-black text-right">
+              <Boton variant="wire" size="md">
+                Guardar / Vincular
+              </Boton>
+            </div>
+          </div>
+        </div>
+      </main>
+    </>
+  )
 }
 
 export default page
