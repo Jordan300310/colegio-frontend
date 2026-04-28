@@ -1,9 +1,98 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import Boton from '../componentes/Boton'
 import Etiquetas from '../componentes/Etiquetas'
 import BarraLateral from '../componentes/BarraLateral'
+import { crearUsuarioSolicitud } from '../../lib/api/login/usuarios'
+
+function getToken(): string {
+  if (typeof window === 'undefined') return ''
+  return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+}
 
 const page = () => {
+  const [nombres, setNombres] = useState('')
+  const [apellidoPaterno, setApellidoPaterno] = useState('')
+  const [apellidoMaterno, setApellidoMaterno] = useState('')
+  const [correo, setCorreo] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [tempPassword, setTempPassword] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const validarCorreo = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError('')
+    setSuccess('')
+
+    if (
+      !nombres.trim() ||
+      !apellidoPaterno.trim() ||
+      !apellidoMaterno.trim() ||
+      !correo.trim()
+    ) {
+      setError('Por favor complete todos los campos obligatorios.')
+      return
+    }
+
+    if (!validarCorreo(correo)) {
+      setError('Ingrese un correo electrónico válido.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const result = await crearUsuarioSolicitud(
+        {
+          nombres: nombres.trim(),
+          apellidos: `${apellidoPaterno.trim()} ${apellidoMaterno.trim()}`,
+          correo: correo.trim(),
+        },
+        getToken(),
+      )
+
+      if (result.exito) {
+        setSuccess('Usuario creado correctamente.')
+        setTempPassword(result.datos?.contrasenaTemporal ?? '')
+        setNombres('')
+        setApellidoPaterno('')
+        setApellidoMaterno('')
+        setCorreo('')
+      } else {
+        setError(result.mensaje || 'No se pudo crear el usuario.')
+        setTempPassword('')
+      }
+    } catch (fetchError) {
+      setError(
+        fetchError instanceof Error
+          ? fetchError.message
+          : 'Ocurrió un error al crear el usuario.',
+      )
+      setTempPassword('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCopyPassword = async () => {
+    if (!tempPassword) return
+
+    try {
+      await navigator.clipboard.writeText(tempPassword)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('No se pudo copiar la contraseña temporal.')
+    }
+  }
+
   return (
     <>
       <BarraLateral />
@@ -37,7 +126,19 @@ const page = () => {
               Formulario de Ingreso
             </div>
 
-            <form className="space-y-8">
+            <form className="space-y-8" onSubmit={handleSubmit}>
+              {error ? (
+                <div className="rounded border border-red-500 bg-red-50 p-4 text-sm font-bold uppercase text-red-700">
+                  {error}
+                </div>
+              ) : null}
+
+              {success ? (
+                <div className="rounded border border-green-500 bg-green-50 p-4 text-sm font-bold uppercase text-green-700">
+                  {success}
+                </div>
+              ) : null}
+
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="text-lg font-bold uppercase border-b-2 border-dashed border-gray-400 inline-block pb-1 text-black">
@@ -53,6 +154,8 @@ const page = () => {
                     </label>
                     <input
                       type="text"
+                      value={nombres}
+                      onChange={(event) => setNombres(event.target.value)}
                       placeholder="Ej. Carlos Alberto"
                       className="w-full border-2 border-black p-3 font-bold outline-none transition-colors duration-200 bg-white focus:bg-gray-50 text-black placeholder:text-gray-500"
                     />
@@ -60,33 +163,78 @@ const page = () => {
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
-                      Apellidos
+                      Apellido Paterno
                     </label>
                     <input
                       type="text"
-                      placeholder="Ej. Mendoza Ruiz"
+                      value={apellidoPaterno}
+                      onChange={(event) => setApellidoPaterno(event.target.value)}
+                      placeholder="Ej. Mendoza"
                       className="w-full border-2 border-black p-3 font-bold outline-none transition-colors duration-200 bg-white focus:bg-gray-50 text-black placeholder:text-gray-500"
                     />
                   </div>
-                </div>
 
-                <div className="mt-6">
-                  <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
-                    Correo Electrónico Institucional
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="ejemplo@colegio.edu.pe"
-                    className="w-full border-2 border-black p-3 font-bold outline-none transition-colors duration-200 bg-white focus:bg-gray-50 text-black placeholder:text-gray-500"
-                  />
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
+                      Apellido Materno
+                    </label>
+                    <input
+                      type="text"
+                      value={apellidoMaterno}
+                      onChange={(event) => setApellidoMaterno(event.target.value)}
+                      placeholder="Ej. Ruiz"
+                      className="w-full border-2 border-black p-3 font-bold outline-none transition-colors duration-200 bg-white focus:bg-gray-50 text-black placeholder:text-gray-500"
+                    />
+                  </div>
 
-                  <p className="text-[10px] font-bold uppercase mt-2 text-gray-600">
-                    El sistema validará que el correo no pertenezca a otra cuenta activa.
-                  </p>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
+                      Correo Electrónico Institucional
+                    </label>
+                    <input
+                      type="email"
+                      value={correo}
+                      onChange={(event) => setCorreo(event.target.value)}
+                      placeholder="ejemplo@colegio.edu.pe"
+                      className="w-full border-2 border-black p-3 font-bold outline-none transition-colors duration-200 bg-white focus:bg-gray-50 text-black placeholder:text-gray-500"
+                    />
+
+                    <p className="text-[10px] font-bold uppercase mt-2 text-gray-600">
+                      El sistema validará que el correo no pertenezca a otra cuenta activa.
+                    </p>
+                  </div>
+
+                  {tempPassword ? (
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start w-full">
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-widest mb-2 text-black">
+                          Contraseña Temporal
+                        </label>
+                        <input
+                          type="text"
+                          value={tempPassword}
+                          readOnly
+                          className="w-full border-2 border-black p-3 font-bold outline-none bg-gray-200 text-black"
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Boton
+                          type="button"
+                          variant="secondary"
+                          size="md"
+                          onClick={handleCopyPassword}
+                          className="self-end"
+                        >
+                          <span className="fa-solid fa-copy text-sm"></span>
+                          <span>{copied ? 'Copiado' : 'Copiar'}</span>
+                        </Boton>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
-              <div className="pt-6 border-t-2 border-black">
+              {/* <div className="pt-6 border-t-2 border-black">
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="text-lg font-bold uppercase border-b-2 border-dashed border-gray-400 inline-block pb-1 text-black">
                     2. Configuración de Acceso
@@ -155,9 +303,9 @@ const page = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
-              <div className="pt-6 border-t-2 border-black">
+              {/* <div className="pt-6 border-t-2 border-black">
                 <h2 className="text-lg font-bold uppercase mb-4 border-b-2 border-dashed border-gray-400 inline-block pb-1 text-black">
                   3. Confirmación del Registro
                 </h2>
@@ -184,21 +332,36 @@ const page = () => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </div> */}
 
               <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-end border-t-4 border-black">
-                <Boton variant="ghost" size="md">
+                <Boton variant="ghost" size="md" type="button" onClick={() => {
+                  setNombres('')
+                  setApellidoPaterno('')
+                  setApellidoMaterno('')
+                  setCorreo('')
+                  setError('')
+                  setSuccess('')
+                  setTempPassword('')
+                  setCopied(false)
+                }}>
                   Cancelar
                 </Boton>
 
-                <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>}>
-                  Registrar Usuario
+                <Boton
+                  variant="wire"
+                  size="md"
+                  icon={<span className="text-sm">＋</span>}
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Registrando...' : 'Registrar Usuario'}
                 </Boton>
               </div>
             </form>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white border-2 border-black p-4">
               <p className="text-[10px] font-bold uppercase text-gray-700 mb-2">
                 Validaciones del Formulario
@@ -218,7 +381,7 @@ const page = () => {
                 el sistema.
               </p>
             </div>
-          </div>
+          </div> */}
         </div>
       </main>
     </>

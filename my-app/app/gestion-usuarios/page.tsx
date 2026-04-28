@@ -25,7 +25,7 @@ const columnas: TablaColumn[] = [
   { key: 'usuario', label: 'Usuario' },
   { key: 'rol', label: 'Rol Actual' },
   { key: 'estado', label: 'Estado' },
-  { key: 'ultimoAcceso', label: 'Último Acceso' },
+  { key: 'fecUltimoAcceso', label: 'Último Acceso' },
 ]
 
 function getToken(): string {
@@ -33,16 +33,24 @@ function getToken(): string {
   return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
 }
 
-function formatFecha(fecha: string | null | undefined): string {
+function formatFecha(fecha: any): string {
   if (!fecha) return 'Nunca'
   try {
-    return new Date(fecha).toLocaleDateString('es-PE', {
+    let d: Date
+    // Si el backend envía la fecha como un array de números [yyyy, mm, dd, hh, mm, ss]
+    if (Array.isArray(fecha) && fecha.length >= 3) {
+      d = new Date(fecha[0], fecha[1] - 1, fecha[2], fecha[3] || 0, fecha[4] || 0, fecha[5] || 0)
+    } else {
+      d = new Date(fecha)
+    }
+    if (isNaN(d.getTime())) return String(fecha)
+    return d.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
     })
   } catch {
-    return fecha
+    return String(fecha)
   }
 }
 
@@ -71,7 +79,7 @@ function usuarioAFila(u: UsuarioRolResponseData): TablaRow {
     estado: u.activo
       ? <Etiquetas variant="success">Activo</Etiquetas>
       : <Etiquetas variant="danger">Inactivo</Etiquetas>,
-    ultimoAcceso: (
+    fecUltimoAcceso: (
       <span className={`text-xs font-bold uppercase ${!u.activo ? 'text-gray-400' : 'text-gray-500'}`}>
         {formatFecha(u.fecUltimoAcceso)}
       </span>
@@ -308,9 +316,9 @@ const page = () => {
                 {paginasVisibles.map((p) => (
                   <button
                     key={p}
-                    onClick={() => cargarUsuarios(p)}
+                    onClick={() => p !== paginaActual && cargarUsuarios(p)}
                     disabled={cargando}
-                    className={`border-2 px-3 py-1 font-bold text-sm ${p === paginaActual ? 'bg-black text-white border-black' : 'border-black hover:bg-gray-200'}`}
+                    className={`border-2 px-3 py-1 font-bold text-sm ${p === paginaActual ? 'bg-black text-white border-black cursor-default' : 'border-black hover:bg-gray-200'}`}
                   >
                     {p + 1}
                   </button>
@@ -328,56 +336,6 @@ const page = () => {
           </div>
         </div>
       </main>
-
-      <div className="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center p-4 backdrop-blur-sm">
-        <div className="bg-white border-4 border-black p-8 max-w-md w-full shadow-[16px_16px_0_0_rgba(255,255,255,1)] relative">
-          <button className="absolute top-4 right-4 text-2xl hover:text-gray-500">
-            ×
-          </button>
-
-          <h2 className="text-2xl font-bold uppercase border-b-2 border-black pb-2 mb-6">
-            Editar Usuario
-          </h2>
-
-          <div className="mb-6 p-3 bg-gray-100 border-2 border-black text-sm">
-            <p className="font-bold uppercase">[ APELLIDO, ALUMNO 1 ]</p>
-            <p className="text-xs text-gray-600 font-bold">alumno1@colegio.edu.pe</p>
-          </div>
-
-          <form className="space-y-6">
-            <CampoSelect
-              field={{
-                type: 'select',
-                name: 'rolEditar',
-                label: 'Asignar Rol (RBAC)',
-                options: ['ALUMNO', 'DOCENTE', 'ADMINISTRADOR'],
-              }}
-              value="ALUMNO"
-            />
-
-            <CampoRadio
-              field={{
-                type: 'radio',
-                name: 'estadoCuenta',
-                label: 'Estado de la Cuenta',
-                options: ['Activo', 'Inactivo (Suspender)'],
-                cols: 2,
-              }}
-              value="Activo"
-            />
-
-            <div className="pt-4 flex gap-4">
-              <Boton variant="ghost" size="md" fullWidth>
-                Cancelar
-              </Boton>
-
-              <Boton variant="primary" size="md" fullWidth>
-                Guardar Cambios
-              </Boton>
-            </div>
-          </form>
-        </div>
-      </div>
 
       {/* <div className="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center p-4 backdrop-blur-sm">
         <div className="bg-white border-4 border-black p-8 max-w-sm w-full shadow-[16px_16px_0_0_rgba(255,255,255,1)] text-center relative">

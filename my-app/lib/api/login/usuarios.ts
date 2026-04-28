@@ -1,4 +1,4 @@
-import { LoginResponse } from './auth'
+import { LoginResponse, buildHeaders, fetchJson } from './auth'
 
 export interface ActualizarRolUsuarioData {
   codRol: string
@@ -39,6 +39,17 @@ export interface CargaMasivaResponseData {
   fallidos: number
   credenciales: CargaMasivaAlumnoCredencial[]
   errores: CargaMasivaAlumnoError[]
+}
+
+export interface CrearUsuarioData {
+  nombres: string
+  apellidos: string
+  correo: string
+}
+
+export interface UsuarioCreadoResponseData {
+  usuario: UsuarioRolResponseData
+  contrasenaTemporal: string
 }
 
 export interface SortDescriptor {
@@ -172,6 +183,20 @@ export async function cargarAlumnosMasivamenteSolicitud(
   }
 
   return response.json()
+}
+
+export async function crearUsuarioSolicitud(
+  data: CrearUsuarioData,
+  token?: string,
+): Promise<LoginResponse<UsuarioCreadoResponseData>> {
+  return fetchJson<LoginResponse<UsuarioCreadoResponseData>>(
+    `${BASE_URL}${UPDATE_USER_ROLE_PATH}`,
+    {
+      method: 'POST',
+      headers: buildHeaders(token),
+      body: JSON.stringify(data),
+    },
+  )
 }
 
 export async function listarUsuariosSolicitud(
