@@ -1,8 +1,16 @@
-import React from 'react'
+'use client'
+
+'use client'
+
+import React, { useState } from 'react'
 import Boton from '../componentes/Boton'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import ZonaArrastre from '../componentes/ZonaArrastre'
 import BarraLateral from '../componentes/BarraLateral'
+import {
+  cargarAlumnosMasivamenteSolicitud,
+  CargaMasivaResponseData,
+} from '../../lib/api/login/usuarios'
 
 const columnasErrores: TablaColumn[] = [
   { key: 'fila', label: 'Fila', className: 'text-center w-16' },
@@ -25,7 +33,62 @@ const filasErrores: TablaRow[] = [
   },
 ]
 
+function getToken(): string {
+  if (typeof window === 'undefined') return ''
+  return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+}
+
 function page() {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [report, setReport] = useState<CargaMasivaResponseData | null>(null)
+  const [processError, setProcessError] = useState('')
+  const [processing, setProcessing] = useState(false)
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return `${size} B`
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const handleFileSelected = (file: File) => {
+    setSelectedFile(file)
+    setReport(null)
+    setProcessError('')
+  }
+
+  const handleProcessFile = async () => {
+    if (!selectedFile) {
+      setProcessError('Seleccione un archivo XLSX o CSV antes de procesar.')
+      return
+    }
+
+    setProcessing(true)
+    setProcessError('')
+
+    try {
+      const result = await cargarAlumnosMasivamenteSolicitud(
+        selectedFile,
+        getToken(),
+      )
+
+      if (result.exito) {
+        setReport(result.datos ?? null)
+      } else {
+        setProcessError(result.mensaje || 'No se pudo procesar el archivo.')
+        setReport(null)
+      }
+    } catch (error) {
+      setProcessError(
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al procesar el archivo.',
+      )
+      setReport(null)
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   return (
     <>
       <BarraLateral />
@@ -54,7 +117,7 @@ function page() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
+          <div className="grid grid-cols-1 gap-10">
             <div className="flex flex-col gap-6">
               <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
                 <h2 className="text-lg font-bold uppercase mb-2">Paso 1: Descargar Plantilla</h2>
@@ -72,30 +135,50 @@ function page() {
                 <h2 className="text-lg font-bold uppercase mb-4">Paso 2: Subir Archivo</h2>
 
                 <div className="mb-4">
-                  <ZonaArrastre />
+                  <ZonaArrastre onFileSelected={handleFileSelected} />
                 </div>
 
-                <div className="bg-gray-200 border-2 border-black p-3 flex justify-between items-center mb-6">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 border-2 border-black bg-white flex items-center justify-center mr-3 font-bold text-xs">
-                      XLS
+                {
+                  selectedFile && (<div className="bg-gray-200 border-2 border-black p-3 flex justify-between items-center mb-6">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 border-2 border-black bg-white flex items-center justify-center mr-3 font-bold text-xs">
+                        {selectedFile?.name.split('.').pop()?.toUpperCase() ?? 'FILE'}
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm uppercase truncate max-w-xs">
+                          {selectedFile?.name ?? 'Sin archivo seleccionado'}
+                        </p>
+                        <p className="text-xs text-gray-600 font-bold uppercase">
+                          {selectedFile ? formatFileSize(selectedFile.size) : '0 KB'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-sm uppercase truncate max-w-xs">
-                        nuevos_ingresos_2026.xlsx
-                      </p>
-                      <p className="text-xs text-gray-600 font-bold uppercase">45 KB</p>
-                    </div>
-                  </div>
 
-                  <button className="text-gray-500 hover:text-black text-xs font-bold uppercase">
-                    Quitar
-                  </button>
-                </div>
+                    <button
+                      className="text-gray-500 hover:text-black text-xs font-bold uppercase"
+                      type="button"
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      Quitar
+                    </button>
+                  </div>)
+                }
 
-                <Boton variant="primary" size="md" fullWidth>
-                  Procesar Archivo
+                <Boton
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  type="button"
+                  onClick={handleProcessFile}
+                  disabled={!selectedFile || processing}
+                >
+                  {processing ? 'Procesando...' : 'Procesar Archivo'}
                 </Boton>
+                {processError ? (
+                  <div className="mt-4 rounded border border-red-500 bg-red-50 p-3 text-sm font-bold uppercase text-red-700">
+                    {processError}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -108,7 +191,8 @@ function page() {
                 Reporte de Carga
               </h2>
               <p className="text-xs font-bold text-gray-500 uppercase mb-6">
-                Archivo: nuevos_ingresos_2026.xlsx | Procesado a las 14:32 hrs.
+                Archivo: {selectedFile?.name ?? 'Ninguno'}
+                {report ? ` | Procesado a las ${new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}` : ''}
               </p>
 
               <div className="grid grid-cols-3 gap-4 mb-6">
@@ -116,43 +200,57 @@ function page() {
                   <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
                     Filas Leídas
                   </p>
-                  <p className="text-2xl font-bold">120</p>
+                  <p className="text-2xl font-bold">{report?.totalProcesados ?? 0}</p>
                 </div>
 
                 <div className="bg-white border-2 border-black border-b-4 p-3 text-center">
                   <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
                     Registrados
                   </p>
-                  <p className="text-2xl font-bold">118</p>
+                  <p className="text-2xl font-bold">{report?.exitosos ?? 0}</p>
                 </div>
 
                 <div className="bg-black text-white border-2 border-black p-3 text-center">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Errores</p>
-                  <p className="text-2xl font-bold">2</p>
+                  <p className="text-2xl font-bold">{report?.fallidos ?? 0}</p>
                 </div>
               </div>
 
               <div className="bg-white border-2 border-dashed border-gray-400 p-4 mb-6 text-center">
                 <p className="font-bold uppercase text-sm mb-2">
-                  118 usuarios creados con éxito.
+                  {report
+                    ? `${report.exitosos} usuarios creados con éxito.`
+                    : 'Aún no se ha procesado un archivo.'}
                 </p>
                 <p className="text-xs text-gray-500 font-bold uppercase mb-4">
-                  Las credenciales temporales han sido generadas.
+                  {report
+                    ? 'Las credenciales temporales han sido generadas.'
+                    : 'Suba un archivo XLSX o CSV y presione Procesar Archivo.'}
                 </p>
 
-                <Boton variant="ghost" size="sm">
+                <Boton variant="ghost" size="sm" disabled={!report?.credenciales.length}
+                >
                   Descargar Credenciales
                 </Boton>
               </div>
 
               <h3 className="font-bold uppercase text-sm mb-3 bg-black text-white inline-block px-2 py-1">
-                Detalle de Errores (2)
+                Detalle de Errores ({report?.fallidos ?? 2})
               </h3>
 
               <div className="bg-white border-2 border-black overflow-hidden">
                 <Tabla
                   columns={columnasErrores}
-                  rows={filasErrores}
+                  rows={
+                    report
+                      ? report.errores.map((errorItem, index) => ({
+                          id: index + 1,
+                          fila: `${errorItem.fila}`,
+                          dato: errorItem.correo,
+                          motivo: <span className="text-gray-600">{errorItem.motivo}</span>,
+                        }))
+                      : filasErrores
+                  }
                   className="max-w-none mx-0 space-y-0"
                 />
               </div>
