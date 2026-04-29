@@ -168,6 +168,7 @@ const page = () => {
               title="[ Módulo 1 ]"
               description="Fundamentos de programación y estructuras de control."
               buttonLabel="Repasar"
+              className="[&_button]:bg-black [&_button]:text-white [&_button]:cursor-pointer [&_button]:hover:bg-white [&_button]:hover:text-black [&_button]:transition-all"
             />
 
             <div className="bg-gray-200 border-4 border-black p-5 relative transform scale-105 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
@@ -188,7 +189,7 @@ const page = () => {
                 60% completado
               </p>
 
-              <button className="w-full border-2 border-black bg-black text-white py-2 text-sm font-bold uppercase hover:bg-white hover:text-black transition-colors">
+              <button className="w-full border-2 border-black bg-black text-white py-2 text-sm font-bold uppercase hover:bg-white hover:text-black transition-colors cursor-pointer">
                 Continuar
               </button>
             </div>

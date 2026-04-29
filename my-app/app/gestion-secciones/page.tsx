@@ -17,29 +17,29 @@ const columnas: TablaColumn[] = [
 const filas: TablaRow[] = [
   {
     id: 1,
-    seccion: <span className="font-bold uppercase">Taller de Programación - A</span>,
-    anio: <span className="font-bold">2026</span>,
-    curso: 'Lógica Digital',
-    docente: 'Lic. Ana Ramírez',
-    alumnos: <span className="font-bold">28</span>,
+    seccion: <span className="font-bold uppercase text-gray-900">Taller de Programación - A</span>,
+    anio: <span className="font-bold text-gray-900">2026</span>,
+    curso: <span className="text-gray-900">Lógica Digital</span>,
+    docente: <span className="text-gray-900">Lic. Ana Ramírez</span>,
+    alumnos: <span className="font-bold text-gray-900">28</span>,
     estado: <Etiquetas variant="success">Activa</Etiquetas>,
   },
   {
     id: 2,
-    seccion: <span className="font-bold uppercase">Taller de Programación - B</span>,
-    anio: <span className="font-bold">2026</span>,
-    curso: 'APIs REST',
-    docente: 'Ing. Carlos Mendoza',
-    alumnos: <span className="font-bold">25</span>,
+    seccion: <span className="font-bold uppercase text-gray-900">Taller de Programación - B</span>,
+    anio: <span className="font-bold text-gray-900">2026</span>,
+    curso: <span className="text-gray-900">APIs REST</span>,
+    docente: <span className="text-gray-900">Ing. Carlos Mendoza</span>,
+    alumnos: <span className="font-bold text-gray-900">25</span>,
     estado: <Etiquetas variant="success">Activa</Etiquetas>,
   },
   {
     id: 3,
-    seccion: <span className="font-bold uppercase">Base de Datos - C</span>,
-    anio: <span className="font-bold">2026</span>,
-    curso: 'Base de Datos',
-    docente: 'Sin asignar',
-    alumnos: <span className="font-bold">0</span>,
+    seccion: <span className="font-bold uppercase text-gray-900">Base de Datos - C</span>,
+    anio: <span className="font-bold text-gray-900">2026</span>,
+    curso: <span className="text-gray-900">Base de Datos</span>,
+    docente: <span className="text-gray-900">Sin asignar</span>,
+    alumnos: <span className="font-bold text-gray-900">0</span>,
     estado: <Etiquetas variant="warning">Sin alumnos</Etiquetas>,
   },
 ]
@@ -47,52 +47,43 @@ const filas: TablaRow[] = [
 const page = () => {
   return (
     <>
-      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
+      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10 text-gray-900">
         <div className="p-6 border-b-2 border-black flex items-center space-x-3">
-          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">
+          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold text-gray-900">
             L
           </div>
-          <span className="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
+          <span className="text-xl font-bold uppercase tracking-widest text-gray-900">[ LOGO ]</span>
         </div>
 
         <nav className="flex-1 px-4 space-y-4 mt-6">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
+          <a href="#" className="flex items-center space-x-3 text-gray-700 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400 cursor-pointer">
             <i className="fa-solid fa-house w-5"></i>
             <span>Dashboard</span>
           </a>
 
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
+          <a href="#" className="flex items-center space-x-3 text-gray-700 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400 cursor-pointer">
             <i className="fa-solid fa-users-gear w-5"></i>
             <span>Gestión Usuarios</span>
           </a>
 
-          <a
-            href="#"
-            className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-          >
+          <a href="#" className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)] cursor-pointer">
             <i className="fa-solid fa-layer-group w-5"></i>
             <span>Gestión Secciones</span>
           </a>
         </nav>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50 text-gray-900">
         <header className="md:hidden bg-white border-b-2 border-black p-4 flex justify-between items-center">
-          <span className="font-bold uppercase">[ LOGO ]</span>
-          <button className="text-black">
+          <span className="font-bold uppercase text-gray-900">[ LOGO ]</span>
+          <button className="text-black cursor-pointer">
             <i className="fa-solid fa-bars text-xl"></i>
           </button>
         </header>
 
         <div className="p-8 max-w-6xl mx-auto w-full pb-20">
-          <div className="text-xs font-bold uppercase text-gray-500 mb-6 tracking-widest">
-            <a href="#" className="hover:text-black hover:underline">
+          <div className="text-xs font-bold uppercase text-gray-700 mb-6 tracking-widest">
+            <a href="#" className="hover:text-black hover:underline cursor-pointer">
               Académico
             </a>
             <i className="fa-solid fa-angle-right mx-2 text-black"></i>
@@ -100,13 +91,13 @@ const page = () => {
           </div>
 
           <div className="mb-8 border-b-4 border-black pb-4">
-            <h1 className="text-3xl font-bold uppercase">Gestión de Secciones</h1>
-            <p className="text-gray-600 font-bold uppercase mt-2 text-sm tracking-widest">
+            <h1 className="text-3xl font-bold uppercase text-gray-900">Gestión de Secciones</h1>
+            <p className="text-gray-700 font-bold uppercase mt-2 text-sm tracking-widest">
               Crear grupos y vincular alumnos a un año escolar
             </p>
           </div>
 
-          <div className="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative">
+          <div className="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative text-gray-900">
             <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black z-10">
               Crear Nueva Sección
             </div>
@@ -145,6 +136,7 @@ const page = () => {
                 variant="primary"
                 size="md"
                 icon={<span className="text-sm">＋</span>}
+                className="cursor-pointer"
               >
                 Crear Nueva Sección
               </Boton>
@@ -169,22 +161,22 @@ const page = () => {
             </div>
           </div>
 
-          <div className="bg-white border-2 border-black overflow-x-auto shadow-[8px_8px_0_0_rgba(0,0,0,1)] mb-12">
+          <div className="bg-white border-2 border-black overflow-x-auto shadow-[8px_8px_0_0_rgba(0,0,0,1)] mb-12 text-gray-900">
             <Tabla
               columns={columnas}
               rows={filas}
-              renderAction={(row) => (
+              renderAction={() => (
                 <div className="flex justify-center gap-2">
                   <button
                     title="Vincular alumnos"
-                    className="min-w-[52px] h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase"
+                    className="min-w-[52px] h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase cursor-pointer text-gray-900"
                   >
                     Vinc
                   </button>
 
                   <button
                     title="Editar sección"
-                    className="min-w-[52px] h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase"
+                    className="min-w-[52px] h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase cursor-pointer text-gray-900"
                   >
                     Edit
                   </button>
@@ -194,7 +186,7 @@ const page = () => {
             />
           </div>
 
-          <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative">
+          <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative text-gray-900">
             <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black">
               Vincular Alumnos
             </div>
@@ -224,25 +216,26 @@ const page = () => {
               />
             </div>
 
-            <div className="mt-6 bg-gray-50 border-2 border-dashed border-gray-400 p-4">
-              <p className="text-xs font-bold uppercase text-gray-600 mb-2">
+            <div className="mt-6 bg-gray-50 border-2 border-dashed border-gray-400 p-4 text-gray-900">
+              <p className="text-xs font-bold uppercase text-gray-700 mb-2">
                 Alumnos disponibles para vincular
               </p>
+
               <div className="space-y-2">
-                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm">
+                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm text-gray-900">
                   [ ALUMNO 1 ] - alumno1@colegio.edu.pe
                 </div>
-                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm">
+                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm text-gray-900">
                   [ ALUMNO 2 ] - alumno2@colegio.edu.pe
                 </div>
-                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm">
+                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm text-gray-900">
                   [ ALUMNO 3 ] - alumno3@colegio.edu.pe
                 </div>
               </div>
             </div>
 
             <div className="mt-8 pt-6 border-t-4 border-black text-right">
-              <Boton variant="wire" size="md">
+              <Boton variant="wire" size="md" className="cursor-pointer">
                 Guardar / Vincular
               </Boton>
             </div>
