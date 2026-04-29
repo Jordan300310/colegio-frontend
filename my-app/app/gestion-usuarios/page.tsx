@@ -87,6 +87,7 @@ function usuarioAFila(u: UsuarioRolResponseData): TablaRow {
   }
 }
 
+
 const page = () => {
   const [usuarios, setUsuarios] = useState<UsuarioRolResponseData[]>([])
   const [cargando, setCargando] = useState(false)
@@ -151,6 +152,10 @@ const page = () => {
     cargarUsuarios(0, nuevosFiltros)
   }
 
+  useEffect(() => {
+    cargarUsuarios(0)
+  }, [])
+
   const usuariosFiltrados = usuarios.filter((u) => {
     if (
       filtrosAplicados.busqueda &&
@@ -179,26 +184,22 @@ const page = () => {
     <>
       <BarraLateral />
 
-      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50 relative">
+      <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50 relative text-gray-900">
         <div className="p-8 max-w-7xl mx-auto w-full pb-20">
           <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end border-b-4 border-black pb-6 gap-4">
             <div>
-              <h1 className="text-3xl font-bold uppercase">Gestión de Usuarios</h1>
-              <p className="text-gray-600 font-bold uppercase mt-2 text-sm tracking-widest">
+              <h1 className="text-3xl font-bold uppercase text-gray-900">Gestión de Usuarios</h1>
+              <p className="text-gray-700 font-bold uppercase mt-2 text-sm tracking-widest">
                 Control de accesos y roles (RBAC)
               </p>
             </div>
 
-            <Boton
-              variant="wire"
-              size="md"
-              icon={<span className="text-sm">＋</span>}
-            >
+            <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>} className="cursor-pointer">
               Nuevo Usuario
             </Boton>
           </div>
 
-          <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
+          <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
             <div className="flex-1">
               <CampoTexto
                 field={{
@@ -302,6 +303,7 @@ const page = () => {
                 {totalElementos > 0
                   ? `Mostrando ${inicio} a ${fin} de ${totalElementos} usuarios`
                   : 'Sin resultados'}
+
               </span>
 
               <div className="flex space-x-2">
@@ -336,43 +338,6 @@ const page = () => {
           </div>
         </div>
       </main>
-
-      {/* <div className="hidden fixed inset-0 bg-black bg-opacity-80 z-50 items-center justify-center p-4 backdrop-blur-sm">
-        <div className="bg-white border-4 border-black p-8 max-w-sm w-full shadow-[16px_16px_0_0_rgba(255,255,255,1)] text-center relative">
-          <div className="w-16 h-16 bg-gray-100 border-2 border-black rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-            🔑
-          </div>
-
-          <h2 className="text-xl font-bold uppercase mb-2">Recuperar Credenciales</h2>
-
-          <p className="text-xs font-bold text-gray-500 uppercase mb-6 leading-relaxed">
-            ¿Estás seguro de generar una nueva contraseña temporal para{' '}
-            <span className="text-black bg-gray-200 px-1">[ APELLIDO, NOMBRE ]</span>?
-          </p>
-
-          <div className="bg-gray-50 border-2 border-dashed border-gray-400 p-3 text-left mb-6">
-            <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">
-              ℹ Postcondición:
-            </p>
-            <p className="text-[10px] font-bold uppercase text-black">
-              Se enviará un correo automáticamente con la nueva clave. El token actual será invalidado por seguridad.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <Boton variant="primary" size="md" fullWidth>
-              Generar y Enviar
-            </Boton>
-
-            <button
-              type="button"
-              className="w-full bg-white border-none py-2 font-bold uppercase text-xs text-gray-500 hover:text-black hover:underline transition-all"
-            >
-              Cancelar Operación
-            </button>
-          </div>
-        </div>
-      </div> */}
     </>
   )
 }
