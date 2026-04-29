@@ -1,5 +1,7 @@
 'use client'
 
+'use client'
+
 import React from 'react'
 import { CampoFormularioField } from './CampoFormulario.types'
 
@@ -29,11 +31,21 @@ const CampoSelect: React.FC<CampoSelectProps> = ({ field, value = '', onChange }
         className="w-full border-2 border-black font-bold uppercase outline-none transition-colors duration-200 p-3 bg-gray-100 focus:bg-white cursor-pointer"
       >
         <option value="">[ Seleccione ]</option>
-        {field.options?.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
+        {field.options?.map((option) => {
+          if (typeof option === 'string') {
+            return (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            )
+          }
+
+          return (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          )
+        })}
       </select>
     </div>
   )

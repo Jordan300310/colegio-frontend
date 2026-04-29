@@ -1,10 +1,17 @@
-import React from 'react'
+'use client'
+
+import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import CampoSelect from '../componentes/CampoSelect'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import Etiquetas from '../componentes/Etiquetas'
 import BarraLateral from '../componentes/BarraLateral'
+import {
+  CursoDetalleResponseData,
+  listarCursosPublicadosSolicitud,
+} from '../../lib/api/login/cursos'
+import { crearSeccionSolicitud } from '../../lib/api/login/secciones'
 
 const columnas: TablaColumn[] = [
   { key: 'seccion', label: 'Sección' },
@@ -46,6 +53,88 @@ const filas: TablaRow[] = [
 ]
 
 const page = () => {
+  const [cursos, setCursos] = useState<CursoDetalleResponseData[]>([])
+  const [nombreGrupo, setNombreGrupo] = useState('')
+  const [anioEscolar, setAnioEscolar] = useState('')
+  const [cursoSeleccionado, setCursoSeleccionado] = useState('')
+  const [loadingCursos, setLoadingCursos] = useState(false)
+  const [creatingSeccion, setCreatingSeccion] = useState(false)
+  const [statusMessage, setStatusMessage] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  const getToken = () => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  useEffect(() => {
+    const loadCursos = async () => {
+      setLoadingCursos(true)
+      setErrorMessage('')
+
+      try {
+        const response = await listarCursosPublicadosSolicitud({}, getToken())
+        const datos = response.datos
+        if (datos && Array.isArray(datos.content)) {
+          setCursos(datos.content)
+        } else {
+          setCursos([])
+        }
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cargar la lista de cursos publicados.',
+        )
+        setCursos([])
+      } finally {
+        setLoadingCursos(false)
+      }
+    }
+
+    loadCursos()
+  }, [])
+
+  const handleCreateSection = async () => {
+    setStatusMessage('')
+    setErrorMessage('')
+
+    if (!nombreGrupo.trim() || !anioEscolar.trim() || !cursoSeleccionado) {
+      setErrorMessage('Complete todos los campos antes de crear la sección.')
+      return
+    }
+
+    setCreatingSeccion(true)
+
+    try {
+      const result = await crearSeccionSolicitud(
+        {
+          idCurso: Number(cursoSeleccionado),
+          idAnioEscolar: Number(anioEscolar),
+          desNombre: nombreGrupo.trim(),
+        },
+        getToken(),
+      )
+
+      if (result.exito) {
+        setStatusMessage('Sección creada correctamente.')
+        setNombreGrupo('')
+        setAnioEscolar('')
+        setCursoSeleccionado('')
+      } else {
+        setErrorMessage(result.mensaje || 'No se pudo crear la sección.')
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'Ocurrió un error al crear la sección.',
+      )
+    } finally {
+      setCreatingSeccion(false)
+    }
+  }
+
   return (
     <>
       <BarraLateral />
@@ -87,6 +176,8 @@ const page = () => {
                   label: 'Nombre del Grupo',
                   placeholder: 'Ej: Taller de Programación - A',
                 }}
+                value={nombreGrupo}
+                onChange={(_, value) => setNombreGrupo(value)}
               />
 
               <CampoTexto
@@ -96,6 +187,8 @@ const page = () => {
                   label: 'Año Escolar',
                   placeholder: 'Ej: 2026',
                 }}
+                value={anioEscolar}
+                onChange={(_, value) => setAnioEscolar(value)}
               />
 
               <CampoSelect
@@ -103,18 +196,42 @@ const page = () => {
                   type: 'select',
                   name: 'curso',
                   label: 'Curso',
-                  options: ['Lógica Digital', 'APIs REST', 'Base de Datos'],
+                  options: cursos.map((curso) => ({
+                    label: curso.desNombre,
+                    value: String(curso.idCurso),
+                  })),
                 }}
+                value={cursoSeleccionado}
+                onChange={(_, value) => setCursoSeleccionado(value)}
               />
             </div>
 
+            {loadingCursos ? (
+              <div className="mt-4 text-sm text-gray-600">Cargando cursos publicados...</div>
+            ) : null}
+
+            {statusMessage ? (
+              <div className="mt-4 rounded border border-green-600 bg-green-50 px-4 py-3 text-sm text-green-800">
+                {statusMessage}
+              </div>
+            ) : null}
+
+            {errorMessage ? (
+              <div className="mt-4 rounded border border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {errorMessage}
+              </div>
+            ) : null}
+
             <div className="mt-8 pt-6 border-t-4 border-black text-right">
               <Boton
+                type="button"
                 variant="primary"
                 size="md"
                 icon={<span className="text-sm">＋</span>}
+                onClick={handleCreateSection}
+                disabled={creatingSeccion}
               >
-                Crear Nueva Sección
+                {creatingSeccion ? 'Creando sección...' : 'Crear Nueva Sección'}
               </Boton>
             </div>
           </div>
