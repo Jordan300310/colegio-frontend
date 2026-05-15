@@ -1,7 +1,20 @@
-import React from 'react'
+"use client"
+
+import React, { useState } from 'react'
 import Boton from '../componentes/Boton'
+import CampoSelect from '../componentes/CampoSelect'
+import CampoTexto from '../componentes/CampoTexto'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import BarraLateral from '../componentes/BarraLateral'
+
+const PAGE_SIZE = 10
+
+type ReporteRecienteData = {
+  id: number
+  fecha: string
+  tipoFiltro: string
+  usuario: string
+}
 
 const columnas: TablaColumn[] = [
   { key: 'fecha', label: 'Fecha' },
@@ -9,22 +22,84 @@ const columnas: TablaColumn[] = [
   { key: 'usuario', label: 'Usuario' },
 ]
 
-const filas: TablaRow[] = [
+const filasDatos: ReporteRecienteData[] = [
   {
     id: 1,
-    fecha: <span className="font-bold italic text-black">13/04/2026</span>,
-    tipoFiltro: <span className="font-bold uppercase text-black">Grupal - Secc. 4to "A"</span>,
-    usuario: <span className="font-bold uppercase text-black">Prof. [Nombre]</span>,
+    fecha: '13/04/2026',
+    tipoFiltro: 'Grupal - Secc. 4to "A"',
+    usuario: 'Prof. [Nombre]',
   },
   {
     id: 2,
-    fecha: <span className="font-bold italic text-black">12/04/2026</span>,
-    tipoFiltro: <span className="font-bold uppercase text-black">Individual - Alumno [X]</span>,
-    usuario: <span className="font-bold uppercase text-black">Admin [Juan J.]</span>,
+    fecha: '12/04/2026',
+    tipoFiltro: 'Individual - Alumno [X]',
+    usuario: 'Admin [Juan J.]',
   },
 ]
 
 const page = () => {
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState('')
+  const [filtroUsuario, setFiltroUsuario] = useState('')
+  const [paginaActual, setPaginaActual] = useState(0)
+
+  const tiposDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.tipoFiltro)))
+  const usuariosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.usuario)))
+
+  const filasFiltradas = filasDatos.filter((fila) => {
+    const term = busqueda.trim().toLowerCase()
+    const matchesTexto =
+      term === '' ||
+      fila.fecha.toLowerCase().includes(term) ||
+      fila.tipoFiltro.toLowerCase().includes(term) ||
+      fila.usuario.toLowerCase().includes(term)
+
+    const matchesTipo = filtroTipo === '' || fila.tipoFiltro === filtroTipo
+    const matchesUsuario = filtroUsuario === '' || fila.usuario === filtroUsuario
+
+    return matchesTexto && matchesTipo && matchesUsuario
+  })
+
+  const totalElementos = filasFiltradas.length
+  const totalPaginas = Math.max(1, Math.ceil(totalElementos / PAGE_SIZE))
+  const inicio = totalElementos === 0 ? 0 : paginaActual * PAGE_SIZE + 1
+  const fin = Math.min((paginaActual + 1) * PAGE_SIZE, totalElementos)
+
+  const filasPaginadas = filasFiltradas
+    .slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE)
+    .map((fila) => ({
+      ...fila,
+      fecha: <span className="font-bold italic text-black">{fila.fecha}</span>,
+      tipoFiltro: <span className="font-bold uppercase text-black">{fila.tipoFiltro}</span>,
+      usuario: <span className="font-bold uppercase text-black">{fila.usuario}</span>,
+    }))
+
+  const paginasVisibles = (() => {
+    const total = Math.max(0, totalPaginas)
+    const maxVisible = 10
+
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i)
+    }
+
+    const mitad = Math.floor(maxVisible / 2)
+    let start = Math.max(0, paginaActual - mitad)
+    let end = Math.min(total - 1, start + maxVisible - 1)
+    start = Math.max(0, end - maxVisible + 1)
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  })()
+
+  const handleBuscar = () => {
+    setPaginaActual(0)
+  }
+
+  const handlePageClick = (pagina: number) => {
+    if (pagina !== paginaActual) {
+      setPaginaActual(pagina)
+    }
+  }
+
   return (
     <>
       <BarraLateral />
@@ -153,10 +228,63 @@ const page = () => {
             Reportes Generados Recientemente
           </h2>
 
-          <div className="bg-white border-2 border-black overflow-x-auto mb-12 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
+          <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
+            <div className="flex-1">
+              <CampoTexto
+                field={{
+                  type: 'search',
+                  name: 'buscarReporte',
+                  label: 'Buscar reporte',
+                  placeholder: 'BUSCAR POR FECHA, TIPO O USUARIO...',
+                  icon: 'fa-solid fa-search',
+                }}
+                value={busqueda}
+                onChange={(_, v) => setBusqueda(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'tipoFiltro',
+                  label: 'Tipo / Filtro',
+                  options: tiposDisponibles,
+                }}
+                value={filtroTipo}
+                onChange={(_, v) => setFiltroTipo(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'usuario',
+                  label: 'Usuario',
+                  options: usuariosDisponibles,
+                }}
+                value={filtroUsuario}
+                onChange={(_, v) => setFiltroUsuario(v)}
+              />
+            </div>
+
+            <div className="flex items-end">
+              <Boton
+                variant="primary"
+                size="md"
+                icon={<i className="fa-solid fa-magnifying-glass text-xs"></i>}
+                onClick={handleBuscar}
+              >
+                Buscar
+              </Boton>
+            </div>
+          </div>
+
+          <div className="bg-white border-2 border-black overflow-x-auto mb-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
             <Tabla
               columns={columnas}
-              rows={filas}
+              rows={filasPaginadas}
               renderAction={() => (
                 <Boton variant="ghost" size="sm">
                   Re-descargar
@@ -164,6 +292,45 @@ const page = () => {
               )}
               className="max-w-none mx-0 space-y-0"
             />
+
+            <div className="p-4 border-t-2 border-black flex items-center justify-between bg-white">
+              <span className="text-xs font-bold uppercase text-gray-500">
+                {totalElementos > 0
+                  ? `Mostrando ${inicio} a ${fin} de ${totalElementos} reportes`
+                  : 'Sin resultados'}
+              </span>
+
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => handlePageClick(paginaActual - 1)}
+                  disabled={paginaActual === 0}
+                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+
+                {paginasVisibles.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => handlePageClick(p)}
+                    className={`border-2 px-3 py-1 font-bold text-sm ${p === paginaActual ? 'bg-black text-white border-black cursor-default' : 'border-black hover:bg-gray-200'}`}
+                  >
+                    {p + 1}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => handlePageClick(paginaActual + 1)}
+                  disabled={paginaActual >= totalPaginas - 1}
+                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="border-2 border-dashed border-gray-400 p-4 bg-gray-50 text-xs font-bold text-gray-600 uppercase leading-relaxed">

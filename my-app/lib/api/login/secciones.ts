@@ -90,6 +90,9 @@ export interface SeccionesPageQuery {
   page?: number
   size?: number
   sort?: string[]
+  busqueda?: string
+  curso?: string
+  activo?: boolean
 }
 
 export async function listarSeccionesSolicitud(
@@ -107,6 +110,9 @@ export async function listarSeccionesSolicitud(
   const params = new URLSearchParams()
   if (query.page !== undefined) params.append('page', String(query.page))
   if (query.size !== undefined) params.append('size', String(query.size))
+  if (query.busqueda) params.append('busqueda', query.busqueda)
+  if (query.curso) params.append('curso', query.curso)
+  if (query.activo !== undefined) params.append('activo', String(query.activo))
   query.sort?.forEach((sortValue) => params.append('sort', sortValue))
 
   const url = `${BASE_URL}${SECCIONES_PATH}${params.toString() ? `?${params.toString()}` : ''}`

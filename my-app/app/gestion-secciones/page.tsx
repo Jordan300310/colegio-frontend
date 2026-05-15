@@ -31,16 +31,32 @@ const page = () => {
   const [seccionesTotalPages, setSeccionesTotalPages] = useState(1)
   const [seccionesTotalElements, setSeccionesTotalElements] = useState(0)
   const [loadingSecciones, setLoadingSecciones] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroCurso, setFiltroCurso] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('')
 
-  const cargarSecciones = async (pageNumber = 0) => {
+  const [filtrosAplicados, setFiltrosAplicados] = useState({
+    busqueda: '',
+    curso: '',
+    estado: '',
+  })
+
+  const cargarSecciones = async (
+    pageNumber = 0,
+    filtrosParaUsar?: typeof filtrosAplicados,
+  ) => {
     setLoadingSecciones(true)
     setErrorMessage('')
 
     try {
-      const response = await listarSeccionesSolicitud(
-        { page: pageNumber, size: PAGE_SIZE },
-        getToken(),
-      )
+      const filtros = filtrosParaUsar ?? filtrosAplicados
+      const params: Record<string, any> = { page: pageNumber, size: PAGE_SIZE }
+      if (filtros.busqueda) params.busqueda = filtros.busqueda
+      if (filtros.curso) params.curso = filtros.curso
+      if (filtros.estado === 'ACTIVOS') params.activo = true
+      if (filtros.estado === 'INACTIVOS') params.activo = false
+
+      const response = await listarSeccionesSolicitud(params, getToken())
 
       const datos = response.datos
       if (datos && Array.isArray(datos.content)) {
@@ -111,6 +127,53 @@ const page = () => {
     loadCursos()
     cargarSecciones(0)
   }, [])
+
+  const handleBuscar = () => {
+    const nuevosFiltros = {
+      busqueda: busqueda.trim().toLowerCase(),
+      curso: filtroCurso,
+      estado: filtroEstado,
+    }
+    setFiltrosAplicados(nuevosFiltros)
+    cargarSecciones(0, nuevosFiltros)
+  }
+
+  const filas: TablaRow[] = secciones.map((seccion) => ({
+    id: seccion.idSeccion,
+    seccion: <span className="font-bold uppercase text-gray-900">{seccion.desNombre}</span>,
+    anio: <span className="font-bold text-gray-900">{seccion.valAnio}</span>,
+    curso: <span className="text-gray-900">{seccion.desCurso}</span>,
+    docente: <span className="text-gray-900">{seccion.desProfesor || 'Sin asignar'}</span>,
+    alumnos: <span className="font-bold text-gray-900">-</span>,
+    estado: seccion.estActivo
+      ? <Etiquetas variant="success">Activa</Etiquetas>
+      : <Etiquetas variant="warning">Inactiva</Etiquetas>,
+  }))
+
+  const inicio = seccionesTotalElements === 0 ? 0 : seccionesPage * PAGE_SIZE + 1
+  const fin = Math.min((seccionesPage + 1) * PAGE_SIZE, seccionesTotalElements)
+
+  const paginasVisibles = (() => {
+    const total = Math.max(0, seccionesTotalPages)
+    const maxVisible = 10
+
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i)
+    }
+
+    const mitad = Math.floor(maxVisible / 2)
+    let start = Math.max(0, seccionesPage - mitad)
+    let end = Math.min(total - 1, start + maxVisible - 1)
+    start = Math.max(0, end - maxVisible + 1)
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  })()
+
+  const handlePageClick = (pageNumber: number) => {
+    if (pageNumber !== seccionesPage) {
+      cargarSecciones(pageNumber)
+    }
+  }
 
   const handleCreateSection = async () => {
     setStatusMessage('')
@@ -258,17 +321,61 @@ const page = () => {
             <h2 className="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">
               Secciones Disponibles
             </h2>
+          </div>
 
-            <div className="w-64 hidden sm:block">
+          <div className="mb-8 bg-white border-2 border-black p-4 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
+            <div className="flex-1">
               <CampoTexto
                 field={{
                   type: 'search',
-                  name: 'filtrar',
-                  label: 'Buscar Sección',
-                  placeholder: 'BUSCAR SECCIÓN...',
-                  icon: 'fa-solid fa-filter',
+                  name: 'buscarSeccion',
+                  label: 'Buscar sección',
+                  placeholder: 'BUSCAR POR NOMBRE O CURSO...',
+                  icon: 'fa-solid fa-search',
                 }}
+                value={busqueda}
+                onChange={(_, v) => setBusqueda(v)}
               />
+            </div>
+
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'curso',
+                  label: 'Curso',
+                  options: cursos.map((curso) => ({
+                    label: curso.desNombre,
+                    value: String(curso.idCurso),
+                  })),
+                }}
+                value={filtroCurso}
+                onChange={(_, v) => setFiltroCurso(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'estado',
+                  label: 'Estado',
+                  options: ['ACTIVOS', 'INACTIVOS'],
+                }}
+                value={filtroEstado}
+                onChange={(_, v) => setFiltroEstado(v)}
+              />
+            </div>
+
+            <div className="flex items-end">
+              <Boton
+                variant="primary"
+                size="md"
+                icon={<i className="fa-solid fa-magnifying-glass text-xs"></i>}
+                onClick={handleBuscar}
+              >
+                Buscar
+              </Boton>
             </div>
           </div>
 
@@ -280,17 +387,7 @@ const page = () => {
             ) : (
               <Tabla
                 columns={columnas}
-                rows={secciones.map((seccion) => ({
-                  id: seccion.idSeccion,
-                  seccion: <span className="font-bold uppercase text-gray-900">{seccion.desNombre}</span>,
-                  anio: <span className="font-bold text-gray-900">{seccion.valAnio}</span>,
-                  curso: <span className="text-gray-900">{seccion.desCurso}</span>,
-                  docente: <span className="text-gray-900">{seccion.desProfesor || 'Sin asignar'}</span>,
-                  alumnos: <span className="font-bold text-gray-900">-</span>,
-                  estado: seccion.estActivo
-                    ? <Etiquetas variant="success">Activa</Etiquetas>
-                    : <Etiquetas variant="warning">Inactiva</Etiquetas>,
-                }))}
+                rows={filas}
                 renderAction={() => (
                   <div className="flex justify-center gap-2">
                     <button
@@ -311,34 +408,49 @@ const page = () => {
                 className="max-w-none mx-0 space-y-0"
               />
             )}
-          </div>
-          <div className="flex items-center justify-between mb-12 text-xs font-bold uppercase text-gray-700">
-            <span>
-              {seccionesTotalElements > 0
-                ? `Mostrando ${seccionesPage * PAGE_SIZE + 1} a ${Math.min((seccionesPage + 1) * PAGE_SIZE, seccionesTotalElements)} de ${seccionesTotalElements} secciones`
-                : 'Sin resultados'}
-            </span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => cargarSecciones(seccionesPage - 1)}
-                disabled={seccionesPage === 0 || loadingSecciones}
-                className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => cargarSecciones(seccionesPage + 1)}
-                disabled={seccionesPage >= seccionesTotalPages - 1 || loadingSecciones}
-                className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+
+            <div className="p-4 border-t-2 border-black flex items-center justify-between bg-white">
+              <span className="text-xs font-bold uppercase text-gray-500">
+                {seccionesTotalElements > 0
+                  ? `Mostrando ${inicio} a ${fin} de ${seccionesTotalElements} secciones`
+                  : 'Sin resultados'}
+              </span>
+
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => cargarSecciones(seccionesPage - 1)}
+                  disabled={seccionesPage === 0 || loadingSecciones}
+                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+
+                {paginasVisibles.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => handlePageClick(p)}
+                    disabled={loadingSecciones}
+                    className={`border-2 px-3 py-1 font-bold text-sm ${p === seccionesPage ? 'bg-black text-white border-black cursor-default' : 'border-black hover:bg-gray-200'}`}
+                  >
+                    {p + 1}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => cargarSecciones(seccionesPage + 1)}
+                  disabled={seccionesPage >= seccionesTotalPages - 1 || loadingSecciones}
+                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white border-2 border-black p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative text-gray-900">
+          <div className="bg-white border-2 border-black mt-10 p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative text-gray-900">
             <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black">
               Vincular Alumnos
             </div>
@@ -393,10 +505,10 @@ const page = () => {
                 variant="primary"
                 size="md"
                 icon={<span className="text-sm">＋</span>}
-                onClick={handleCreateSection}
+                onClick={() => { /* Lógica para vincular alumnos a la sección seleccionada */ }}
                 disabled={creatingSeccion}
               >
-                {creatingSeccion ? 'Creando sección...' : 'Crear Nueva Sección'}
+                {creatingSeccion ? 'Vinculando...' : 'Vincular Alumnos'}
               </Boton>
             </div>
           </div>

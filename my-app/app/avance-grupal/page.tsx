@@ -1,9 +1,14 @@
-import React from 'react'
+"use client"
+
+import React, { useState } from 'react'
 import Boton from '../componentes/Boton'
+import CampoTexto from '../componentes/CampoTexto'
 import CampoSelect from '../componentes/CampoSelect'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
+
+const PAGE_SIZE = 6
 
 const columnas: TablaColumn[] = [
   { key: 'estudiante', label: 'Estudiante' },
@@ -12,52 +17,110 @@ const columnas: TablaColumn[] = [
   { key: 'moduloActual', label: 'Módulo Actual' },
 ]
 
-const filas: TablaRow[] = [
+type RezagadoData = {
+  id: number
+  estudiante: string
+  correo: string
+  ultimaConexion: string
+  progreso: number
+  moduloActual: string
+  estado: 'Rezagado' | 'Al Día'
+}
+
+const filasDatos: RezagadoData[] = [
   {
     id: 1,
-    estudiante: (
-      <div>
-        <p className="font-bold uppercase text-black">[ APELLIDO, NOMBRE 1 ]</p>
-        <p className="text-xs text-gray-600 font-bold">correo1@colegio.edu.pe</p>
-      </div>
-    ),
-    ultimaConexion: <span className="text-gray-700 font-bold">Hace 15 días</span>,
-    progreso: (
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-black min-w-[40px]">12%</span>
-        <div className="w-20 bg-gray-200 h-2 border border-black">
-          <div className="bg-black h-full" style={{ width: '12%' }}></div>
-        </div>
-      </div>
-    ),
-    moduloActual: (
-      <span className="font-bold text-gray-700 uppercase">Mod 1 - Pendiente</span>
-    ),
+    estudiante: '[ APELLIDO, NOMBRE 1 ]',
+    correo: 'correo1@colegio.edu.pe',
+    ultimaConexion: 'Hace 15 días',
+    progreso: 12,
+    moduloActual: 'Mod 1 - Pendiente',
+    estado: 'Rezagado',
   },
   {
     id: 2,
-    estudiante: (
-      <div>
-        <p className="font-bold uppercase text-black">[ APELLIDO, NOMBRE 2 ]</p>
-        <p className="text-xs text-gray-600 font-bold">correo2@colegio.edu.pe</p>
-      </div>
-    ),
-    ultimaConexion: <span className="text-gray-700 font-bold">Hace 7 días</span>,
-    progreso: (
-      <div className="flex items-center gap-2">
-        <span className="font-bold text-black min-w-[40px]">35%</span>
-        <div className="w-20 bg-gray-200 h-2 border border-black">
-          <div className="bg-black h-full" style={{ width: '35%' }}></div>
-        </div>
-      </div>
-    ),
-    moduloActual: (
-      <span className="font-bold text-gray-700 uppercase">Mod 2 - Examen Reprobado</span>
-    ),
+    estudiante: '[ APELLIDO, NOMBRE 2 ]',
+    correo: 'correo2@colegio.edu.pe',
+    ultimaConexion: 'Hace 7 días',
+    progreso: 35,
+    moduloActual: 'Mod 2 - Examen Reprobado',
+    estado: 'Rezagado',
   },
 ]
 
 const page = () => {
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroModulo, setFiltroModulo] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('')
+  const [paginaActual, setPaginaActual] = useState(0)
+
+  const modulosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.moduloActual)))
+  const estadosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.estado)))
+
+  const filasFiltradas = filasDatos.filter((fila) => {
+    const term = busqueda.trim().toLowerCase()
+    const matchesTexto =
+      term === '' ||
+      fila.estudiante.toLowerCase().includes(term) ||
+      fila.correo.toLowerCase().includes(term) ||
+      fila.moduloActual.toLowerCase().includes(term)
+
+    const matchesModulo = filtroModulo === '' || fila.moduloActual === filtroModulo
+    const matchesEstado = filtroEstado === '' || fila.estado === filtroEstado
+
+    return matchesTexto && matchesModulo && matchesEstado
+  })
+
+  const totalElementos = filasFiltradas.length
+  const totalPaginas = Math.max(1, Math.ceil(totalElementos / PAGE_SIZE))
+  const inicio = totalElementos === 0 ? 0 : paginaActual * PAGE_SIZE + 1
+  const fin = Math.min((paginaActual + 1) * PAGE_SIZE, totalElementos)
+
+  const filasPaginadas = filasFiltradas.slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE).map((fila) => ({
+    id: fila.id,
+    estudiante: (
+      <div>
+        <p className="font-bold uppercase text-black">{fila.estudiante}</p>
+        <p className="text-xs text-gray-600 font-bold">{fila.correo}</p>
+      </div>
+    ),
+    ultimaConexion: <span className="text-gray-700 font-bold">{fila.ultimaConexion}</span>,
+    progreso: (
+      <div className="flex items-center gap-2">
+        <span className="font-bold text-black min-w-10">{fila.progreso}%</span>
+        <div className="w-20 bg-gray-200 h-2 border border-black">
+          <div className="bg-black h-full" style={{ width: `${fila.progreso}%` }}></div>
+        </div>
+      </div>
+    ),
+    moduloActual: (
+      <span className="font-bold text-gray-700 uppercase">{fila.moduloActual}</span>
+    ),
+  }))
+
+  const paginasVisibles = (() => {
+    const total = Math.max(0, totalPaginas)
+    const maxVisible = 10
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i)
+    }
+
+    const mitad = Math.floor(maxVisible / 2)
+    let start = Math.max(0, paginaActual - mitad)
+    let end = Math.min(total - 1, start + maxVisible - 1)
+    start = Math.max(0, end - maxVisible + 1)
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  })()
+
+  const handleBuscar = () => {
+    setPaginaActual(0)
+  }
+
+  const handlePageClick = (pageNumber: number) => {
+    if (pageNumber !== paginaActual) {
+      setPaginaActual(pageNumber)
+    }
+  }
   return (
     <>
       <BarraLateral />
@@ -196,6 +259,59 @@ const page = () => {
             </div>
           </div>
 
+          <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
+            <div className="flex-1">
+              <CampoTexto
+                field={{
+                  type: 'search',
+                  name: 'buscarRezagado',
+                  label: 'Buscar rezagados',
+                  placeholder: 'BUSCAR POR NOMBRE, CORREO O MÓDULO... ',
+                  icon: 'fa-solid fa-search',
+                }}
+                value={busqueda}
+                onChange={(_, v) => setBusqueda(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'modulo',
+                  label: 'Módulo',
+                  options: ['', ...modulosDisponibles],
+                }}
+                value={filtroModulo}
+                onChange={(_, v) => setFiltroModulo(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'estado',
+                  label: 'Estado',
+                  options: ['', ...estadosDisponibles],
+                }}
+                value={filtroEstado}
+                onChange={(_, v) => setFiltroEstado(v)}
+              />
+            </div>
+
+            <div className="flex items-end">
+              <Boton
+                variant="primary"
+                size="md"
+                icon={<i className="fa-solid fa-magnifying-glass text-xs"></i>}
+                onClick={handleBuscar}
+              >
+                Buscar
+              </Boton>
+            </div>
+          </div>
+
           <div className="flex justify-between items-end mb-4 gap-4">
             <h2 className="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">
               Atención Prioritaria (Rezagados)
@@ -206,10 +322,10 @@ const page = () => {
             </button>
           </div>
 
-          <div className="bg-white border-2 border-black overflow-x-auto mb-12 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
+          <div className="bg-white border-2 border-black overflow-hidden mb-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
             <Tabla
               columns={columnas}
-              rows={filas}
+              rows={filasPaginadas}
               renderAction={() => (
                 <Boton variant="ghost" size="sm">
                   Ver Ficha
@@ -217,6 +333,45 @@ const page = () => {
               )}
               className="max-w-none mx-0 space-y-0"
             />
+
+            <div className="p-4 border-t-2 border-black flex items-center justify-between bg-white">
+              <span className="text-xs font-bold uppercase text-gray-500">
+                {totalElementos > 0
+                  ? `Mostrando ${inicio} a ${fin} de ${totalElementos} alumnos`
+                  : 'Sin resultados'}
+              </span>
+
+              <div className="flex space-x-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handlePageClick(paginaActual - 1)}
+                  disabled={paginaActual === 0}
+                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+
+                {paginasVisibles.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => handlePageClick(p)}
+                    className={`border-2 px-3 py-1 font-bold text-sm ${p === paginaActual ? 'bg-black text-white border-black cursor-default' : 'border-black hover:bg-gray-200'}`}
+                  >
+                    {p + 1}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => handlePageClick(paginaActual + 1)}
+                  disabled={paginaActual >= totalPaginas - 1}
+                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </main>

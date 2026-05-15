@@ -25,8 +25,6 @@ const NAV_POR_ROL: Record<string, NavItem[]> = {
     ROL_ADMIN: [
         { href: '/perfil', label: 'Perfil' },
         { href: '/gestion-usuarios', label: 'Gestión de Usuarios' },
-        { href: '/registro-usuarios', label: 'Registro de Usuarios' },
-        { href: '/carga-masiva', label: 'Carga Masiva' },
         { href: '/gestion-secciones', label: 'Gestión de Secciones' },
         { href: '/asignacion-docente', label: 'Asignación Docente' },
         { href: '/generador-reportes', label: 'Generador de Reportes' },
