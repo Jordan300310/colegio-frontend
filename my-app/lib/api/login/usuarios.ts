@@ -87,6 +87,9 @@ export interface UsuariosPageQuery {
   page?: number
   size?: number
   sort?: string[]
+  busqueda?: string
+  rol?: string
+  activo?: boolean
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -215,6 +218,11 @@ export async function listarUsuariosSolicitud(
   if (query.page !== undefined) params.append('page', String(query.page))
   if (query.size !== undefined) params.append('size', String(query.size))
   query.sort?.forEach((sortValue) => params.append('sort', sortValue))
+
+  // Agregar los parámetros de filtro a la URL
+  if (query.busqueda) params.append('busqueda', query.busqueda)
+  if (query.rol) params.append('rol', query.rol)
+  if (query.activo !== undefined) params.append('activo', String(query.activo))
 
   const url = `${BASE_URL}${UPDATE_USER_ROLE_PATH}${params.toString() ? `?${params.toString()}` : ''}`
 

@@ -12,6 +12,7 @@ import {
   listarUsuariosSolicitud,
   UsuarioRolResponseData,
 } from '../../lib/api/login/usuarios'
+import FormUsuario from './form/FormUsuario'
 
 const PAGE_SIZE = 10
 
@@ -98,6 +99,7 @@ const page = () => {
   const [busqueda, setBusqueda] = useState('')
   const [filtroRol, setFiltroRol] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [mostrarFormUsuario, setMostrarFormUsuario] = useState(false)
 
   const ROL_MAP: Record<string, string> = {
     ADMINISTRADOR: 'ROL_ADMIN',
@@ -156,29 +158,30 @@ const page = () => {
     cargarUsuarios(0)
   }, [])
 
-  const usuariosFiltrados = usuarios.filter((u) => {
-    if (
-      filtrosAplicados.busqueda &&
-      !`${u.nombres} ${u.apellidos} ${u.correo}`.toLowerCase().includes(filtrosAplicados.busqueda)
-    )
-      return false
-    if (filtrosAplicados.rol && u.rol !== filtrosAplicados.rol) return false
-    if (filtrosAplicados.estado === 'ACTIVOS' && !u.activo) return false
-    if (filtrosAplicados.estado === 'INACTIVOS / BANEADOS' && u.activo) return false
-    return true
-  })
-  const filas: TablaRow[] = usuariosFiltrados.map(usuarioAFila)
+  const filas: TablaRow[] = usuarios.map(usuarioAFila)
 
-  const inicio = paginaActual * PAGE_SIZE + 1
+  const inicio = totalElementos === 0 ? 0 : paginaActual * PAGE_SIZE + 1
   const fin = Math.min((paginaActual + 1) * PAGE_SIZE, totalElementos)
 
-  const paginasVisibles = Array.from({ length: Math.min(totalPaginas, 5) }, (_, i) => {
-    const mitad = 2
+  const paginasVisibles = (() => {
+    const total = Math.max(0, totalPaginas)
+    const maxVisible = 10
+
+    // Si hay 10 o menos páginas en total, las mostramos todas (de 0 a total - 1)
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i)
+    }
+
+    // Si hay más de 10 páginas, centramos el rango en la página actual
+    const mitad = Math.floor(maxVisible / 2)
     let start = Math.max(0, paginaActual - mitad)
-    const end = Math.min(totalPaginas - 1, start + 4)
-    start = Math.max(0, end - 4)
-    return start + i
-  }).filter((p) => p < totalPaginas)
+    let end = Math.min(total - 1, start + maxVisible - 1)
+
+    // Ajuste por si estamos en las últimas páginas (para mantener 10 botones)
+    start = Math.max(0, end - maxVisible + 1)
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  })()
 
   return (
     <>
@@ -194,7 +197,7 @@ const page = () => {
               </p>
             </div>
 
-            <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>} className="cursor-pointer">
+            <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>} className="cursor-pointer" onClick={() => setMostrarFormUsuario(true)}>
               Nuevo Usuario
             </Boton>
           </div>
@@ -266,7 +269,7 @@ const page = () => {
                 columns={columnas}
                 rows={filas}
                 renderAction={(row) => {
-                  const u = usuariosFiltrados.find((x) => x.idUsuario === row.id)
+                  const u = usuarios.find((x) => x.idUsuario === row.id)
                   if (!u) return null
                   return (
                     <div className="flex justify-center gap-2">
@@ -337,6 +340,15 @@ const page = () => {
             </div>
           </div>
         </div>
+        {mostrarFormUsuario && (
+          <FormUsuario
+            onClose={() => setMostrarFormUsuario(false)}
+            onSuccess={() => {
+              setMostrarFormUsuario(false)
+              cargarUsuarios(0) // Recarga la tabla de usuarios desde la página 0 tras crear uno nuevo
+            }}
+          />
+        )}
       </main>
     </>
   )
