@@ -9,10 +9,12 @@ import Etiquetas from '../componentes/Etiquetas'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import BarraLateral from '../componentes/BarraLateral'
 import {
+  actualizarEstadoUsuarioSolicitud,
   listarUsuariosSolicitud,
   UsuarioRolResponseData,
 } from '../../lib/api/login/usuarios'
 import FormUsuario from './form/FormUsuario'
+import Link from 'next/link'
 
 const PAGE_SIZE = 10
 
@@ -183,6 +185,18 @@ const page = () => {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   })()
 
+  const cambiarEstadoUsuario = (activo: boolean, idUsuario: number) => {
+    if (activo) {
+      actualizarEstadoUsuarioSolicitud(idUsuario, { activo: false }, getToken())
+        .then(() => cargarUsuarios(paginaActual))
+        .catch((err) => setError(err instanceof Error ? err.message : 'Error al actualizar estado de usuario.'))
+    } else {
+      actualizarEstadoUsuarioSolicitud(idUsuario, { activo: true }, getToken())
+        .then(() => cargarUsuarios(paginaActual))
+        .catch((err) => setError(err instanceof Error ? err.message : 'Error al actualizar estado de usuario.'))
+    }
+  }
+
   return (
     <>
       <BarraLateral />
@@ -196,10 +210,18 @@ const page = () => {
                 Control de accesos y roles (RBAC)
               </p>
             </div>
-
-            <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>} className="cursor-pointer" onClick={() => setMostrarFormUsuario(true)}>
-              Nuevo Usuario
-            </Boton>
+            <div className="flex space-x-4">
+              <Link href="/registro-usuarios/">
+                <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>} className="cursor-pointer">
+                  Nuevo Usuario
+                </Boton>
+              </Link>
+              <Link href="/carga-masiva/">
+                <Boton variant="wire" size="md" icon={<span className="text-sm">＋</span>} className="cursor-pointer">
+                  Carga Masiva
+                </Boton>
+              </Link>
+            </div>
           </div>
 
           <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
@@ -283,6 +305,7 @@ const page = () => {
                       <button
                         title={u.activo ? 'Suspender Cuenta' : 'Activar Cuenta'}
                         className="min-w-10.5 h-8 px-2 border-2 border-black font-bold text-[10px] uppercase transition-colors hover:bg-black hover:text-white"
+                        onClick={() => cambiarEstadoUsuario(u.activo, u.idUsuario)}
                       >
                         {u.activo ? 'Off' : 'On'}
                       </button>

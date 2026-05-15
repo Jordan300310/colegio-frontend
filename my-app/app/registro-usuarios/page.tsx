@@ -5,6 +5,7 @@ import Boton from '../componentes/Boton'
 import Etiquetas from '../componentes/Etiquetas'
 import BarraLateral from '../componentes/BarraLateral'
 import { crearUsuarioSolicitud } from '../../lib/api/login/usuarios'
+import Link from 'next/link'
 
 function getToken(): string {
   if (typeof window === 'undefined') return ''
@@ -107,9 +108,9 @@ const page = () => {
 
         <div className="p-8 max-w-5xl mx-auto w-full pb-20">
           <div className="text-xs font-bold uppercase text-gray-600 mb-6 tracking-widest">
-            <a href="#" className="hover:text-black hover:underline">
+            <Link href="/gestion-usuarios" className="hover:text-black hover:underline">
               Gestión Usuarios
-            </a>
+            </Link>
             <i className="fa-solid fa-angle-right mx-2 text-black"></i>
             <span className="text-black border-b-2 border-black">Nuevo Registro</span>
           </div>
@@ -335,18 +336,20 @@ const page = () => {
               </div> */}
 
               <div className="pt-8 flex flex-col sm:flex-row gap-4 justify-end border-t-4 border-black">
-                <Boton variant="ghost" size="md" type="button" onClick={() => {
-                  setNombres('')
-                  setApellidoPaterno('')
-                  setApellidoMaterno('')
-                  setCorreo('')
-                  setError('')
-                  setSuccess('')
-                  setTempPassword('')
-                  setCopied(false)
-                }}>
-                  Cancelar
-                </Boton>
+                <Link href="/gestion-usuarios/">
+                  <Boton variant="ghost" size="md" type="button" onClick={() => {
+                    setNombres('')
+                    setApellidoPaterno('')
+                    setApellidoMaterno('')
+                    setCorreo('')
+                    setError('')
+                    setSuccess('')
+                    setTempPassword('')
+                    setCopied(false)
+                  }}>
+                    Cancelar
+                  </Boton>
+                </Link>
 
                 <Boton
                   variant="wire"

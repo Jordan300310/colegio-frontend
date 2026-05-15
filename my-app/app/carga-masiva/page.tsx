@@ -9,6 +9,7 @@ import {
   cargarAlumnosMasivamenteSolicitud,
   CargaMasivaResponseData,
 } from '../../lib/api/login/usuarios'
+import Link from 'next/link'
 
 const columnasErrores: TablaColumn[] = [
   { key: 'fila', label: 'Fila', className: 'text-center w-16' },
@@ -101,9 +102,9 @@ export default function Page() {
 
         <div className="p-8 max-w-7xl mx-auto w-full pb-20">
           <div className="text-xs font-bold uppercase text-gray-700 mb-6 tracking-widest">
-            <a href="#" className="hover:text-black hover:underline cursor-pointer">
-              Administración
-            </a>
+            <Link href="/gestion-usuarios" className="hover:text-black hover:underline cursor-pointer">
+              Gestión de Usuarios
+            </Link>
             <i className="fa-solid fa-angle-right mx-2 text-black"></i>
             <span className="text-black border-b-2 border-black">Carga Masiva</span>
           </div>
@@ -256,11 +257,11 @@ export default function Page() {
                   rows={
                     report
                       ? report.errores.map((errorItem, index) => ({
-                          id: index + 1,
-                          fila: `${errorItem.fila}`,
-                          dato: errorItem.correo,
-                          motivo: <span className="text-gray-600">{errorItem.motivo}</span>,
-                        }))
+                        id: index + 1,
+                        fila: `${errorItem.fila}`,
+                        dato: errorItem.correo,
+                        motivo: <span className="text-gray-600">{errorItem.motivo}</span>,
+                      }))
                       : filasErrores
                   }
                   className="max-w-none mx-0 space-y-0"
