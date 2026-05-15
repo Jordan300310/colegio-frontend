@@ -1,12 +1,13 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import CampoSelect from '../componentes/CampoSelect'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
+import { SeccionDetalleResponseData, listarSeccionesSolicitud } from '../../lib/api/login/secciones'
 
 const PAGE_SIZE = 6
 
@@ -53,6 +54,34 @@ const page = () => {
   const [filtroModulo, setFiltroModulo] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [paginaActual, setPaginaActual] = useState(0)
+  const [secciones, setSecciones] = useState<SeccionDetalleResponseData[]>([])
+  const [seccionActiva, setSeccionActiva] = useState('')
+  const [fechaInicio, setFechaInicio] = useState('2026-03-01')
+  const [fechaFin, setFechaFin] = useState(() => {
+    const hoy = new Date()
+    return hoy.toISOString().slice(0, 10)
+  })
+
+  const getToken = (): string => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  useEffect(() => {
+    const cargarSecciones = async () => {
+      try {
+        const response = await listarSeccionesSolicitud({ page: 0, size: 100 }, getToken())
+        const datos = response.datos
+        if (datos && Array.isArray(datos.content)) {
+          setSecciones(datos.content)
+        }
+      } catch {
+        setSecciones([])
+      }
+    }
+
+    cargarSecciones()
+  }, [])
 
   const modulosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.moduloActual)))
   const estadosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.estado)))
@@ -151,12 +180,10 @@ const page = () => {
                   type: 'select',
                   name: 'seccionActiva',
                   label: ' ',
-                  options: [
-                    '4TO "A" - TALLER DE PROGRAMACIÓN',
-                    '5TO "B" - BASE DE DATOS',
-                    '3RO "ÚNICA" - LÓGICA DIGITAL',
-                  ],
+                  options: secciones.map((seccion) => seccion.desNombre),
                 }}
+                value={seccionActiva}
+                onChange={(_, v) => setSeccionActiva(v)}
               />
             </div>
 
@@ -165,9 +192,9 @@ const page = () => {
                 Fecha Inicio
               </label>
               <input
-                type="text"
-                value="01/03/2026"
-                readOnly
+                type="date"
+                value={fechaInicio}
+                onChange={(event) => setFechaInicio(event.target.value)}
                 className="w-full border-2 border-black p-3 font-bold uppercase bg-white text-black outline-none"
               />
             </div>
@@ -178,9 +205,9 @@ const page = () => {
                   Fecha Fin
                 </label>
                 <input
-                  type="text"
-                  value="ACTUALIDAD"
-                  readOnly
+                  type="date"
+                  value={fechaFin}
+                  onChange={(event) => setFechaFin(event.target.value)}
                   className="w-full border-2 border-black p-3 font-bold uppercase bg-white text-black outline-none"
                 />
               </div>
@@ -259,6 +286,16 @@ const page = () => {
             </div>
           </div>
 
+          <div className="flex justify-between items-end mb-4 gap-4">
+            <h2 className="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">
+              Atención Prioritaria (Rezagados)
+            </h2>
+
+            <button className="text-xs font-bold uppercase border-b-2 border-black hover:text-gray-600 transition-colors text-black">
+              Ver todos los alumnos <i className="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+          </div>
+
           <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
             <div className="flex-1">
               <CampoTexto
@@ -280,7 +317,7 @@ const page = () => {
                   type: 'select',
                   name: 'modulo',
                   label: 'Módulo',
-                  options: ['', ...modulosDisponibles],
+                  options: modulosDisponibles,
                 }}
                 value={filtroModulo}
                 onChange={(_, v) => setFiltroModulo(v)}
@@ -293,7 +330,7 @@ const page = () => {
                   type: 'select',
                   name: 'estado',
                   label: 'Estado',
-                  options: ['', ...estadosDisponibles],
+                  options: estadosDisponibles,
                 }}
                 value={filtroEstado}
                 onChange={(_, v) => setFiltroEstado(v)}
@@ -310,16 +347,6 @@ const page = () => {
                 Buscar
               </Boton>
             </div>
-          </div>
-
-          <div className="flex justify-between items-end mb-4 gap-4">
-            <h2 className="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">
-              Atención Prioritaria (Rezagados)
-            </h2>
-
-            <button className="text-xs font-bold uppercase border-b-2 border-black hover:text-gray-600 transition-colors text-black">
-              Ver todos los alumnos <i className="fa-solid fa-arrow-right ml-1"></i>
-            </button>
           </div>
 
           <div className="bg-white border-2 border-black overflow-hidden mb-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
