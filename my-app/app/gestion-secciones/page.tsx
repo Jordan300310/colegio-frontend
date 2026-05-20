@@ -12,6 +12,10 @@ import {
   listarCursosPublicadosSolicitud,
 } from '../../lib/api/login/cursos'
 import { crearSeccionSolicitud, listarSeccionesSolicitud, SeccionDetalleResponseData } from '../../lib/api/login/secciones'
+import {
+  ResumenAnioEscolarResponseData,
+  obtenerResumenAnioEscolarSolicitud,
+} from '../../lib/api/login/ano_escolar'
 
 const PAGE_SIZE = 10
 
@@ -44,7 +48,7 @@ const page = () => {
   const cargarSecciones = async (
     pageNumber = 0,
     filtrosParaUsar?: typeof filtrosAplicados,
-  ) => {
+  ): Promise<SeccionDetalleResponseData[]> => {
     setLoadingSecciones(true)
     setErrorMessage('')
 
@@ -70,6 +74,7 @@ const page = () => {
         setSeccionesTotalElements(0)
         setSeccionesPage(0)
       }
+      return datos?.content ?? []
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -80,6 +85,7 @@ const page = () => {
       setSeccionesTotalPages(1)
       setSeccionesTotalElements(0)
       setSeccionesPage(0)
+      return []
     } finally {
       setLoadingSecciones(false)
     }
@@ -89,7 +95,9 @@ const page = () => {
   const [nombreGrupo, setNombreGrupo] = useState('')
   const [anioEscolar, setAnioEscolar] = useState('')
   const [cursoSeleccionado, setCursoSeleccionado] = useState('')
+  const [aniosEscolares, setAniosEscolares] = useState<ResumenAnioEscolarResponseData[]>([])
   const [loadingCursos, setLoadingCursos] = useState(false)
+  const [loadingAniosEscolares, setLoadingAniosEscolares] = useState(false)
   const [creatingSeccion, setCreatingSeccion] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -97,6 +105,40 @@ const page = () => {
   const getToken = () => {
     if (typeof window === 'undefined') return ''
     return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  const cargarAniosEscolares = async (seccionesCargadas: SeccionDetalleResponseData[]) => {
+    const idsUnicos = Array.from(
+      new Set(seccionesCargadas.map((seccion) => seccion.idAnioEscolar)),
+    )
+
+    if (idsUnicos.length === 0) {
+      setAniosEscolares([])
+      return
+    }
+
+    setLoadingAniosEscolares(true)
+    setErrorMessage('')
+
+    try {
+      const resumenes = await Promise.all(
+        idsUnicos.map(async (idAnio) => {
+          const response = await obtenerResumenAnioEscolarSolicitud(idAnio, getToken())
+          return response.datos
+        }),
+      )
+
+      setAniosEscolares(resumenes.filter((resumen): resumen is ResumenAnioEscolarResponseData => !!resumen))
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar los años escolares disponibles.',
+      )
+      setAniosEscolares([])
+    } finally {
+      setLoadingAniosEscolares(false)
+    }
   }
 
   useEffect(() => {
@@ -124,8 +166,13 @@ const page = () => {
       }
     }
 
-    loadCursos()
-    cargarSecciones(0)
+    const loadInicial = async () => {
+      await loadCursos()
+      const seccionesCargadas = await cargarSecciones(0)
+      await cargarAniosEscolares(seccionesCargadas)
+    }
+
+    loadInicial()
   }, [])
 
   const handleBuscar = () => {
@@ -261,12 +308,15 @@ const page = () => {
                 onChange={(_, value) => setNombreGrupo(value)}
               />
 
-              <CampoTexto
+              <CampoSelect
                 field={{
-                  type: 'number',
+                  type: 'select',
                   name: 'anioEscolar',
                   label: 'Año Escolar',
-                  placeholder: 'Ej: 2026',
+                  options: aniosEscolares.map((anio) => ({
+                    label: `${anio.valAnio} - ${anio.desDescripcion}`,
+                    value: String(anio.idAnioEscolar),
+                  })),
                 }}
                 value={anioEscolar}
                 onChange={(_, value) => setAnioEscolar(value)}

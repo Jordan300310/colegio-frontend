@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoSelect from '../componentes/CampoSelect'
 import CampoTexto from '../componentes/CampoTexto'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import BarraLateral from '../componentes/BarraLateral'
+import { listarSeccionesSolicitud, SeccionDetalleResponseData } from '../../lib/api/login/secciones'
 
 const PAGE_SIZE = 10
 
@@ -41,10 +42,15 @@ const page = () => {
   const [busqueda, setBusqueda] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
   const [filtroUsuario, setFiltroUsuario] = useState('')
+  const [filtroSeccion, setFiltroSeccion] = useState('')
   const [paginaActual, setPaginaActual] = useState(0)
+  const [secciones, setSecciones] = useState<SeccionDetalleResponseData[]>([])
+  const [loadingSecciones, setLoadingSecciones] = useState(false)
+  const [seccionesError, setSeccionesError] = useState('')
 
   const tiposDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.tipoFiltro)))
   const usuariosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.usuario)))
+  const seccionSeleccionada = secciones.find((sec) => String(sec.idSeccion) === filtroSeccion)
 
   const filasFiltradas = filasDatos.filter((fila) => {
     const term = busqueda.trim().toLowerCase()
@@ -56,8 +62,11 @@ const page = () => {
 
     const matchesTipo = filtroTipo === '' || fila.tipoFiltro === filtroTipo
     const matchesUsuario = filtroUsuario === '' || fila.usuario === filtroUsuario
+    const matchesSeccion =
+      filtroSeccion === '' ||
+      (seccionSeleccionada ? fila.tipoFiltro.includes(seccionSeleccionada.desNombre) : true)
 
-    return matchesTexto && matchesTipo && matchesUsuario
+    return matchesTexto && matchesTipo && matchesUsuario && matchesSeccion
   })
 
   const totalElementos = filasFiltradas.length
@@ -89,6 +98,37 @@ const page = () => {
 
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   })()
+
+  const getToken = () => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  const cargarSecciones = async () => {
+    setLoadingSecciones(true)
+    setSeccionesError('')
+
+    try {
+      const response = await listarSeccionesSolicitud(
+        { page: 0, size: 100 },
+        getToken(),
+      )
+      setSecciones(response.datos?.content ?? [])
+    } catch (error) {
+      setSeccionesError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar las secciones disponibles.',
+      )
+      setSecciones([])
+    } finally {
+      setLoadingSecciones(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarSecciones()
+  }, [])
 
   const handleBuscar = () => {
     setPaginaActual(0)
@@ -122,14 +162,26 @@ const page = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
-                  Sección / Grupo
-                </label>
-                <select className="w-full border-2 border-black p-3 font-bold uppercase bg-gray-100 focus:bg-white focus:outline-none text-black">
-                  <option>[ Todas las Secciones ]</option>
-                  <option>4to "A" - Primer Semestre</option>
-                  <option>5to "B" - Segundo Semestre</option>
-                </select>
+                <CampoSelect
+                  field={{
+                    type: 'select',
+                    name: 'seccionGrupo',
+                    label: 'Sección / Grupo',
+                    options: loadingSecciones
+                      ? ['Cargando...']
+                      : secciones.map((seccion) => ({
+                        label: `${seccion.desNombre} - ${seccion.valAnio}`,
+                        value: String(seccion.idSeccion),
+                      })),
+                  }}
+                  value={filtroSeccion}
+                  onChange={(_, value) => setFiltroSeccion(value)}
+                />
+                {seccionesError && (
+                  <p className="text-xs text-red-600 font-bold uppercase mt-2">
+                    {seccionesError}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -168,7 +220,7 @@ const page = () => {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-300 space-y-3 text-black">
+            {/* <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-300 space-y-3 text-black">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -189,7 +241,7 @@ const page = () => {
                   Incluir historial de intentos de examen
                 </span>
               </div>
-            </div>
+            </div> */}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">

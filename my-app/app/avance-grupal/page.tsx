@@ -8,6 +8,7 @@ import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
 import { SeccionDetalleResponseData, listarSeccionesSolicitud } from '../../lib/api/login/secciones'
+import { obtenerProgresoSeccionSolicitud, ProgresoSeccionResponseData, AlumnoProgresoData } from '../../lib/api/login/progreso'
 
 const PAGE_SIZE = 6
 
@@ -56,6 +57,10 @@ const page = () => {
   const [paginaActual, setPaginaActual] = useState(0)
   const [secciones, setSecciones] = useState<SeccionDetalleResponseData[]>([])
   const [seccionActiva, setSeccionActiva] = useState('')
+  const [progreso, setProgreso] = useState<ProgresoSeccionResponseData | null>(null)
+  const [alumnos, setAlumnos] = useState<AlumnoProgresoData[]>([])
+  const [loadingProgreso, setLoadingProgreso] = useState(false)
+  const [errorProgreso, setErrorProgreso] = useState('')
   const [fechaInicio, setFechaInicio] = useState('2026-03-01')
   const [fechaFin, setFechaFin] = useState(() => {
     const hoy = new Date()
@@ -85,17 +90,21 @@ const page = () => {
 
   const modulosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.moduloActual)))
   const estadosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.estado)))
+  const promedioPorcentaje = alumnos.length
+    ? Number((alumnos.reduce((sum, alumno) => sum + alumno.porcentaje, 0) / alumnos.length).toFixed(1))
+    : 0
+  const totalRezagados = alumnos.filter((alumno) => alumno.porcentaje < 50).length
 
-  const filasFiltradas = filasDatos.filter((fila) => {
+  const filasFiltradas = alumnos.filter((fila) => {
     const term = busqueda.trim().toLowerCase()
+    const nombreCompleto = `${fila.apellidos} ${fila.nombres}`
     const matchesTexto =
       term === '' ||
-      fila.estudiante.toLowerCase().includes(term) ||
-      fila.correo.toLowerCase().includes(term) ||
-      fila.moduloActual.toLowerCase().includes(term)
+      nombreCompleto.toLowerCase().includes(term) ||
+      fila.ultimaActividad.toLowerCase().includes(term)
 
-    const matchesModulo = filtroModulo === '' || fila.moduloActual === filtroModulo
-    const matchesEstado = filtroEstado === '' || fila.estado === filtroEstado
+    const matchesModulo = filtroModulo === '' || `${fila.leccionesCompletadas}/${fila.totalLeccionesObligatorias}` === filtroModulo
+    const matchesEstado = filtroEstado === '' || (fila.porcentaje < 50 ? 'Rezagado' : 'Al Día') === filtroEstado
 
     return matchesTexto && matchesModulo && matchesEstado
   })
@@ -106,24 +115,26 @@ const page = () => {
   const fin = Math.min((paginaActual + 1) * PAGE_SIZE, totalElementos)
 
   const filasPaginadas = filasFiltradas.slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE).map((fila) => ({
-    id: fila.id,
+    id: fila.idAlumno,
     estudiante: (
       <div>
-        <p className="font-bold uppercase text-black">{fila.estudiante}</p>
-        <p className="text-xs text-gray-600 font-bold">{fila.correo}</p>
+        <p className="font-bold uppercase text-black">[{fila.apellidos} {fila.nombres}]</p>
+        <p className="text-xs text-gray-600 font-bold">{fila.ultimaActividad}</p>
       </div>
     ),
-    ultimaConexion: <span className="text-gray-700 font-bold">{fila.ultimaConexion}</span>,
+    ultimaConexion: <span className="text-gray-700 font-bold">{new Date(fila.ultimaActividad).toLocaleDateString('es-PE')}</span>,
     progreso: (
       <div className="flex items-center gap-2">
-        <span className="font-bold text-black min-w-10">{fila.progreso}%</span>
+        <span className="font-bold text-black min-w-10">{fila.porcentaje}%</span>
         <div className="w-20 bg-gray-200 h-2 border border-black">
-          <div className="bg-black h-full" style={{ width: `${fila.progreso}%` }}></div>
+          <div className="bg-black h-full" style={{ width: `${fila.porcentaje}%` }}></div>
         </div>
       </div>
     ),
     moduloActual: (
-      <span className="font-bold text-gray-700 uppercase">{fila.moduloActual}</span>
+      <span className="font-bold text-gray-700 uppercase">
+        {fila.leccionesCompletadas}/{fila.totalLeccionesObligatorias}
+      </span>
     ),
   }))
 
@@ -141,8 +152,46 @@ const page = () => {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   })()
 
-  const handleBuscar = () => {
+  const handleBuscar = async () => {
     setPaginaActual(0)
+    if (!seccionActiva) return
+
+    setLoadingProgreso(true)
+    setErrorProgreso('')
+    try {
+      const seccion = secciones.find((sec) => sec.desNombre === seccionActiva)
+      if (!seccion) {
+        setErrorProgreso('Seleccione una sección válida.')
+        setProgreso(null)
+        setAlumnos([])
+        return
+      }
+
+      const response = await obtenerProgresoSeccionSolicitud(
+        seccion.idSeccion,
+        { page: 0, size: PAGE_SIZE, sort: ['porcentaje,desc'] },
+        getToken(),
+      )
+
+      const datos = response.datos
+      if (datos) {
+        setProgreso(datos)
+        setAlumnos(datos.alumnos.content)
+      } else {
+        setProgreso(null)
+        setAlumnos([])
+      }
+    } catch (error) {
+      setErrorProgreso(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar el progreso de la sección.',
+      )
+      setProgreso(null)
+      setAlumnos([])
+    } finally {
+      setLoadingProgreso(false)
+    }
   }
 
   const handlePageClick = (pageNumber: number) => {
@@ -180,14 +229,14 @@ const page = () => {
                   type: 'select',
                   name: 'seccionActiva',
                   label: ' ',
-                  options: secciones.map((seccion) => seccion.desNombre),
+                  options: secciones.length > 0 ? secciones.map((seccion) => seccion.desNombre) : ['Cargando secciones...'],
                 }}
                 value={seccionActiva}
                 onChange={(_, v) => setSeccionActiva(v)}
               />
             </div>
 
-            <div className="w-full lg:w-1/4">
+            {/* <div className="w-full lg:w-1/4">
               <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
                 Fecha Inicio
               </label>
@@ -197,10 +246,10 @@ const page = () => {
                 onChange={(event) => setFechaInicio(event.target.value)}
                 className="w-full border-2 border-black p-3 font-bold uppercase bg-white text-black outline-none"
               />
-            </div>
+            </div> */}
 
             <div className="w-full lg:w-1/4 flex gap-4 items-end">
-              <div className="flex-1">
+              {/* <div className="flex-1">
                 <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
                   Fecha Fin
                 </label>
@@ -210,18 +259,35 @@ const page = () => {
                   onChange={(event) => setFechaFin(event.target.value)}
                   className="w-full border-2 border-black p-3 font-bold uppercase bg-white text-black outline-none"
                 />
-              </div>
+              </div> */}
 
-              <Boton variant="primary" size="md">
+              <Boton variant="primary" size="md" onClick={handleBuscar}>
                 Filtrar
               </Boton>
             </div>
+            {errorProgreso && (
+              <p className="text-xs font-bold uppercase text-red-600 mt-2">
+                {errorProgreso}
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <TarjetaEstadistica title="Total Alumnos" value="32" icon="fa-solid fa-users" />
-            <TarjetaEstadistica title="Promedio Grupo" value="16.4 / 20" icon="fa-solid fa-chart-simple" />
-            <TarjetaEstadistica title="Alumnos Rezagados" value="8" icon="fa-solid fa-triangle-exclamation" />
+            <TarjetaEstadistica
+              title="Total Alumnos"
+              value={progreso ? String(progreso.alumnos.totalElements) : '0'}
+              icon="fa-solid fa-users"
+            />
+            <TarjetaEstadistica
+              title="Promedio Grupo"
+              value={progreso ? `${promedioPorcentaje}%` : '0%'}
+              icon="fa-solid fa-chart-simple"
+            />
+            <TarjetaEstadistica
+              title="Alumnos Rezagados"
+              value={progreso ? String(totalRezagados) : '0'}
+              icon="fa-solid fa-triangle-exclamation"
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
@@ -231,29 +297,43 @@ const page = () => {
               </h3>
 
               <div className="h-56 border-b-2 border-l-2 border-black flex items-end justify-between p-2 pt-8 gap-3">
-                <div className="w-full flex flex-col items-center group">
-                  <span className="text-xs font-bold mb-1 text-black">95%</span>
-                  <div className="w-full bg-black h-[95%] border-2 border-black group-hover:bg-gray-800 transition-colors"></div>
-                  <span className="text-xs font-bold mt-2 text-black">MOD 1</span>
-                </div>
+                {alumnos.slice(0, 4).map((alumno) => (
+                  <div key={alumno.idAlumno} className="w-full flex flex-col items-center group">
+                    <span className="text-xs font-bold mb-1 text-black">{alumno.porcentaje}%</span>
+                    <div
+                      className={`w-full border-2 border-black ${alumno.porcentaje >= 70 ? 'bg-black' : 'bg-gray-400'} group-hover:bg-gray-800 transition-colors`}
+                      style={{ height: `${alumno.porcentaje}%` }}
+                    />
+                    <span className="text-xs font-bold mt-2 text-black">{alumno.apellidos} {alumno.nombres}</span>
+                  </div>
+                ))}
+                {alumnos.length === 0 && (
+                  <>
+                    <div className="w-full flex flex-col items-center group">
+                      <span className="text-xs font-bold mb-1 text-black">95%</span>
+                      <div className="w-full bg-black h-[95%] border-2 border-black group-hover:bg-gray-800 transition-colors"></div>
+                      <span className="text-xs font-bold mt-2 text-black">MOD 1</span>
+                    </div>
 
-                <div className="w-full flex flex-col items-center group">
-                  <span className="text-xs font-bold mb-1 text-black">70%</span>
-                  <div className="w-full bg-black h-[70%] border-2 border-black group-hover:bg-gray-800 transition-colors"></div>
-                  <span className="text-xs font-bold mt-2 text-black">MOD 2</span>
-                </div>
+                    <div className="w-full flex flex-col items-center group">
+                      <span className="text-xs font-bold mb-1 text-black">70%</span>
+                      <div className="w-full bg-black h-[70%] border-2 border-black group-hover:bg-gray-800 transition-colors"></div>
+                      <span className="text-xs font-bold mt-2 text-black">MOD 2</span>
+                    </div>
 
-                <div className="w-full flex flex-col items-center group">
-                  <span className="text-xs font-bold mb-1 text-black">45%</span>
-                  <div className="w-full bg-gray-400 h-[45%] border-2 border-black border-dashed group-hover:bg-gray-500 transition-colors"></div>
-                  <span className="text-xs font-bold mt-2 text-black">MOD 3</span>
-                </div>
+                    <div className="w-full flex flex-col items-center group">
+                      <span className="text-xs font-bold mb-1 text-black">45%</span>
+                      <div className="w-full bg-gray-400 h-[45%] border-2 border-black border-dashed group-hover:bg-gray-500 transition-colors"></div>
+                      <span className="text-xs font-bold mt-2 text-black">MOD 3</span>
+                    </div>
 
-                <div className="w-full flex flex-col items-center group">
-                  <span className="text-xs font-bold mb-1 text-black">10%</span>
-                  <div className="w-full bg-gray-200 h-[10%] border-2 border-black border-dashed group-hover:bg-gray-300 transition-colors"></div>
-                  <span className="text-xs font-bold mt-2 text-black">MOD 4</span>
-                </div>
+                    <div className="w-full flex flex-col items-center group">
+                      <span className="text-xs font-bold mb-1 text-black">10%</span>
+                      <div className="w-full bg-gray-200 h-[10%] border-2 border-black border-dashed group-hover:bg-gray-300 transition-colors"></div>
+                      <span className="text-xs font-bold mt-2 text-black">MOD 4</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

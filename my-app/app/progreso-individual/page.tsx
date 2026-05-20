@@ -1,16 +1,116 @@
-import React from 'react'
+"use client"
+
+import { useState } from 'react'
 import Boton from '../componentes/Boton'
+import CampoSelect from '../componentes/CampoSelect'
 import Etiquetas from '../componentes/Etiquetas'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
+import { obtenerProgresoAlumnoCursoSolicitud, ProgresoAlumnoCursoResponseData } from '../../lib/api/login/progreso'
+
+const alumnosDisponibles = [
+  { idAlumno: 1, label: '[ APELLIDO, NOMBRE 1 ]' },
+  { idAlumno: 2, label: '[ APELLIDO, NOMBRE 2 ]' },
+]
+
+const cursosDisponibles = [
+  { idCurso: 101, label: 'Java Básico' },
+  { idCurso: 102, label: 'Programación Avanzada' },
+]
 
 const page = () => {
+  const [alumnoSeleccionado, setAlumnoSeleccionado] = useState('')
+  const [cursoSeleccionado, setCursoSeleccionado] = useState('')
+  const [detalleProgreso, setDetalleProgreso] = useState<ProgresoAlumnoCursoResponseData | null>(null)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
+  const [errorDetalle, setErrorDetalle] = useState('')
+
+  const getToken = (): string => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  const handleFiltrar = async () => {
+    setErrorDetalle('')
+    if (!alumnoSeleccionado || !cursoSeleccionado) {
+      setErrorDetalle('Seleccione alumno y curso antes de filtrar.')
+      return
+    }
+
+    setLoadingDetalle(true)
+    try {
+      const response = await obtenerProgresoAlumnoCursoSolicitud(
+        Number(alumnoSeleccionado),
+        Number(cursoSeleccionado),
+        getToken(),
+      )
+      setDetalleProgreso(response.datos ?? null)
+    } catch (error) {
+      setErrorDetalle(
+        error instanceof Error
+          ? error.message
+          : 'Error al cargar el detalle de progreso.',
+      )
+      setDetalleProgreso(null)
+    } finally {
+      setLoadingDetalle(false)
+    }
+  }
+
+  const progresoAlumno = detalleProgreso
+
   return (
     <>
       <BarraLateral />
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
         <div className="p-8 max-w-6xl mx-auto w-full pb-20">
+          <div className="bg-white border-2 border-black p-6 mb-8 flex flex-col lg:flex-row gap-6 items-end shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
+            <div className="w-full lg:w-1/3">
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
+                Seleccionar Alumno
+              </label>
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'alumno',
+                  label: ' ',
+                  options: alumnosDisponibles.map((alumno) => ({
+                    label: alumno.label,
+                    value: String(alumno.idAlumno),
+                  })),
+                }}
+                value={alumnoSeleccionado}
+                onChange={(_, v) => setAlumnoSeleccionado(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-1/3">
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
+                Seleccionar Curso
+              </label>
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'curso',
+                  label: ' ',
+                  options: cursosDisponibles.map((curso) => ({
+                    label: curso.label,
+                    value: String(curso.idCurso),
+                  })),
+                }}
+                value={cursoSeleccionado}
+                onChange={(_, v) => setCursoSeleccionado(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-1/4 flex gap-4 items-end">
+              <Boton variant="primary" size="md" onClick={handleFiltrar}>
+                {loadingDetalle ? 'Cargando...' : 'Filtrar'}
+              </Boton>
+            </div>
+          </div>
+
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b-4 border-black pb-6 gap-4">
             <div className="flex items-start space-x-6">
               <div className="w-24 h-24 border-4 border-black bg-gray-200 flex items-center justify-center text-4xl flex-shrink-0">
@@ -43,11 +143,32 @@ const page = () => {
             </div>
           </div>
 
+          {errorDetalle && (
+            <p className="text-xs font-bold uppercase text-red-600 mt-2">
+              {errorDetalle}
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            <TarjetaEstadistica title="Avance del Curso" value="65%" icon="fa-solid fa-chart-line" />
-            <TarjetaEstadistica title="Tiempo Invertido" value="12.5 hrs" icon="fa-solid fa-clock" />
-            <TarjetaEstadistica title="Promedio Notas" value="18.5" icon="fa-solid fa-award" />
-            <TarjetaEstadistica title="Lecciones Vistas" value="26 / 40" icon="fa-solid fa-book-open" />
+            <TarjetaEstadistica
+              title="Avance del Curso"
+              value={progresoAlumno ? `${progresoAlumno.porcentajeAvance}%` : '0%'}
+              icon="fa-solid fa-chart-line"
+            />
+            <TarjetaEstadistica
+              title="Tiempo Invertido"
+              value={progresoAlumno ? 'N/A' : '0 hrs'}
+              icon="fa-solid fa-clock"
+            />
+            <TarjetaEstadistica
+              title="Promedio Notas"
+              value={progresoAlumno ? 'N/A' : '0'}
+              icon="fa-solid fa-award"
+            />
+            <TarjetaEstadistica
+              title="Lecciones Vistas"
+              value={progresoAlumno ? `${progresoAlumno.leccionesCompletadas} / ${progresoAlumno.totalLeccionesObligatorias}` : '0 / 0'}
+              icon="fa-solid fa-book-open"
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -63,8 +184,8 @@ const page = () => {
                   </div>
 
                   <div className="bg-white border-2 border-black p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-                    <p className="text-xs font-bold text-gray-600 uppercase">12 ABR 2026 - 14:20</p>
-                    <p className="font-bold uppercase text-black">L2: Estructuras de Control</p>
+                    <p className="text-xs font-bold text-gray-600 uppercase">{progresoAlumno ? new Date(progresoAlumno.ultimaActividad).toLocaleDateString('es-PE') : '12 ABR 2026'} - 14:20</p>
+                    <p className="font-bold uppercase text-black">{progresoAlumno ? progresoAlumno.nombreCurso : 'L2: Estructuras de Control'}</p>
                     <p className="text-xs mt-1 text-gray-700 font-bold uppercase">
                       Tiempo en lección: 24 min.
                     </p>

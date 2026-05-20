@@ -5,7 +5,7 @@ import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import Etiquetas from '../componentes/Etiquetas'
 import BarraLateral from '../componentes/BarraLateral'
-import { obtenerUsuarioPorIdSolicitud, UsuarioRolResponseData } from '../../lib/api/login/usuarios'
+import { obtenerUsuarioMeSolicitud, UsuarioRolResponseData } from '../../lib/api/login/usuarios'
 import { cambiarContrasenaSolicitud } from '../../lib/api/login/auth'
 
 const ETIQUETAS_ROL: Record<string, string> = {
@@ -100,7 +100,7 @@ const page = () => {
       return
     }
 
-    obtenerUsuarioPorIdSolicitud(auth.idUsuario, auth.token)
+    obtenerUsuarioMeSolicitud(auth.token)
       .then((res) => {
         const datos = (res.datos ?? res) as UsuarioRolResponseData
         if (datos?.idUsuario) {

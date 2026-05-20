@@ -89,7 +89,14 @@ export interface UsuariosPageQuery {
   sort?: string[]
   busqueda?: string
   rol?: string
-  activo?: boolean
+  estActivo?: boolean
+  sinSeccion?: boolean
+}
+
+export interface EditarUsuarioData {
+  desNombres: string,
+  desApellidos: string,
+  desCorreo: string
 }
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
@@ -160,6 +167,38 @@ export async function actualizarEstadoUsuarioSolicitud(
   return response.json()
 }
 
+export async function actualizarDatosUsuarioSolicitud(
+  idUsuario: number,
+  data: EditarUsuarioData,
+  token?: string,
+): Promise<LoginResponse<UsuarioRolResponseData>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(
+    `${BASE_URL}${UPDATE_USER_ROLE_PATH}/${idUsuario}/datos`,
+    {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al actualizar datos de usuario: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
 export async function cargarAlumnosMasivamenteSolicitud(
   archivo: File,
   token?: string,
@@ -222,7 +261,8 @@ export async function listarUsuariosSolicitud(
   // Agregar los parámetros de filtro a la URL
   if (query.busqueda) params.append('busqueda', query.busqueda)
   if (query.rol) params.append('rol', query.rol)
-  if (query.activo !== undefined) params.append('activo', String(query.activo))
+  if (query.estActivo !== undefined) params.append('estActivo', String(query.estActivo))
+  if (query.sinSeccion !== undefined) params.append('sinSeccion', String(query.sinSeccion))
 
   const url = `${BASE_URL}${UPDATE_USER_ROLE_PATH}${params.toString() ? `?${params.toString()}` : ''}`
 
@@ -269,4 +309,41 @@ export async function obtenerUsuarioPorIdSolicitud(
   }
 
   return response.json()
+}
+
+export async function obtenerUsuarioMeSolicitud(
+  token?: string,
+): Promise<LoginResponse<UsuarioRolResponseData>> {
+  const response = await fetch(
+    `${BASE_URL}${UPDATE_USER_ROLE_PATH}/me`,
+    {
+      method: 'GET',
+      headers: buildHeaders(token),
+    },
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al obtener usuario actual: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
+export interface CambiarContrasenaUsuarioData {
+  pwdNueva: string
+}
+
+export async function cambiarContrasenaUsuarioSolicitud(
+  idUsuario: number,
+  data: CambiarContrasenaUsuarioData,
+  token?: string,
+): Promise<LoginResponse> {
+  return fetchJson<LoginResponse>(`${BASE_URL}${UPDATE_USER_ROLE_PATH}/${idUsuario}/contrasena`, {
+    method: 'PUT',
+    headers: buildHeaders(token),
+    body: JSON.stringify(data),
+  })
 }

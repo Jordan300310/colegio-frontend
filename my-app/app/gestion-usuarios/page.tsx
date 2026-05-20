@@ -14,6 +14,7 @@ import {
   UsuarioRolResponseData,
 } from '../../lib/api/login/usuarios'
 import FormUsuario from './form/FormUsuario'
+import FormCambiarContrasena from './form/FormCambiarContrasena'
 import Link from 'next/link'
 
 const PAGE_SIZE = 10
@@ -101,7 +102,9 @@ const page = () => {
   const [busqueda, setBusqueda] = useState('')
   const [filtroRol, setFiltroRol] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroSeccion, setFiltroSeccion] = useState('')
   const [mostrarFormUsuario, setMostrarFormUsuario] = useState(false)
+  const [usuarioCambioContrasena, setUsuarioCambioContrasena] = useState<UsuarioRolResponseData | null>(null)
 
   const ROL_MAP: Record<string, string> = {
     ADMINISTRADOR: 'ROL_ADMIN',
@@ -113,6 +116,7 @@ const page = () => {
     busqueda: '',
     rol: '',
     estado: '',
+    seccion: '',
   })
 
   const cargarUsuarios = (pagina: number, filtrosParaUsar?: typeof filtrosAplicados) => {
@@ -125,8 +129,9 @@ const page = () => {
     const params: Record<string, any> = { page: pagina, size: PAGE_SIZE }
     if (filtros.busqueda) params.busqueda = filtros.busqueda
     if (filtros.rol) params.rol = filtros.rol
-    if (filtros.estado === 'ACTIVOS') params.activo = true
-    if (filtros.estado === 'INACTIVOS / BANEADOS') params.activo = false
+    if (filtros.estado === 'ACTIVOS') params.estActivo = true
+    if (filtros.estado === 'INACTIVOS / BANEADOS') params.estActivo = false
+    if (filtros.seccion === 'SIN SECCIÓN') params.sinSeccion = true
 
     listarUsuariosSolicitud(params, getToken())
       .then((res) => {
@@ -151,6 +156,7 @@ const page = () => {
       busqueda: busqueda.trim().toLowerCase(),
       rol: filtroRol ? ROL_MAP[filtroRol] : '',
       estado: filtroEstado,
+      seccion: filtroSeccion,
     }
     setFiltrosAplicados(nuevosFiltros)
     cargarUsuarios(0, nuevosFiltros)
@@ -265,6 +271,19 @@ const page = () => {
               />
             </div>
 
+            <div className="w-full lg:w-48">
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'seccion',
+                  label: 'Sección',
+                  options: ['SIN SECCIÓN'],
+                }}
+                value={filtroSeccion}
+                onChange={(_, v) => setFiltroSeccion(v)}
+              />
+            </div>
+
             <div className="flex items-end">
               <Boton
                 variant="primary"
@@ -295,12 +314,14 @@ const page = () => {
                   if (!u) return null
                   return (
                     <div className="flex justify-center gap-2">
-                      <button
-                        title="Editar Rol/Perfil"
-                        className="min-w-10.5 h-8 px-2 border-2 border-black font-bold text-[10px] uppercase transition-colors hover:bg-black hover:text-white"
-                      >
-                        Edit
-                      </button>
+                      <Link href={`/registro-usuarios?id=${u.idUsuario}`}>
+                        <button
+                          title="Editar Datos"
+                          className="min-w-10.5 h-8 px-2 border-2 border-black font-bold text-[10px] uppercase transition-colors hover:bg-black hover:text-white"
+                        >
+                          Edit
+                        </button>
+                      </Link>
 
                       <button
                         title={u.activo ? 'Suspender Cuenta' : 'Activar Cuenta'}
@@ -311,9 +332,10 @@ const page = () => {
                       </button>
 
                       <button
-                        title="Recuperar Credenciales"
+                        title={u.activo ? 'Cambiar contraseña' : 'Activar cuenta para cambiar contraseña'}
                         disabled={!u.activo}
                         className={`min-w-10.5 h-8 px-2 border-2 font-bold text-[10px] uppercase transition-colors ${!u.activo ? 'border-gray-400 text-gray-400 cursor-not-allowed' : 'border-black hover:bg-black hover:text-white'}`}
+                        onClick={() => u.activo && setUsuarioCambioContrasena(u)}
                       >
                         Key
                       </button>
@@ -369,6 +391,18 @@ const page = () => {
             onSuccess={() => {
               setMostrarFormUsuario(false)
               cargarUsuarios(0) // Recarga la tabla de usuarios desde la página 0 tras crear uno nuevo
+            }}
+          />
+        )}
+
+        {usuarioCambioContrasena && (
+          <FormCambiarContrasena
+            idUsuario={usuarioCambioContrasena.idUsuario}
+            nombreUsuario={`${usuarioCambioContrasena.apellidos}, ${usuarioCambioContrasena.nombres}`}
+            onClose={() => setUsuarioCambioContrasena(null)}
+            onSuccess={() => {
+              setUsuarioCambioContrasena(null)
+              cargarUsuarios(paginaActual)
             }}
           />
         )}

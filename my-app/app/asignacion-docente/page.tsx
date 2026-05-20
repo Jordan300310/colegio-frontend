@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import CampoCheckbox from '../componentes/CampoCheckbox'
@@ -8,6 +8,10 @@ import CampoSelect from '../componentes/CampoSelect'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import Etiquetas from '../componentes/Etiquetas'
 import BarraLateral from '../componentes/BarraLateral'
+import {
+  listarProfesoresSeccionSolicitud,
+  ProfesorSeccionData,
+} from '../../lib/api/login/profesores'
 
 const PAGE_SIZE = 10
 
@@ -17,52 +21,44 @@ const columnasAsignaciones: TablaColumn[] = [
   { key: 'fecha', label: 'Fecha Vinculación', className: 'text-center' },
 ]
 
-type AsignacionData = {
-  id: number
-  docente: string
-  curso: string
-  fecha: string
-}
+type AsignacionData = ProfesorSeccionData
 
-const filasAsignaciones: AsignacionData[] = [
-  {
-    id: 1,
-    docente: '[ LIC. ANA RAMÍREZ ]',
-    curso: '3RO "A" - LÓGICA DIGITAL',
-    fecha: '01/03/2026',
-  },
-  {
-    id: 2,
-    docente: '[ ING. CARLOS MENDOZA ]',
-    curso: '5TO "ÚNICA" - APIS REST',
-    fecha: '15/03/2026',
-  },
-]
+function getToken(): string {
+  if (typeof window === 'undefined') return ''
+  return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+}
 
 export default function Page() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroDocente, setFiltroDocente] = useState('')
   const [filtroCurso, setFiltroCurso] = useState('')
   const [paginaActual, setPaginaActual] = useState(0)
+  const [asignaciones, setAsignaciones] = useState<AsignacionData[]>([])
+  const [loadingAsignaciones, setLoadingAsignaciones] = useState(false)
+  const [fetchError, setFetchError] = useState('')
 
-  const cursosDisponibles = Array.from(new Set(filasAsignaciones.map((fila) => fila.curso))).map((curso) => ({
+  const cursosDisponibles = Array.from(new Set(asignaciones.map((fila) => fila.nombreCurso))).map((curso) => ({
     label: curso,
     value: curso,
   }))
-  const docentesDisponibles = Array.from(new Set(filasAsignaciones.map((fila) => fila.docente))).map((docente) => ({
+  const docentesDisponibles = Array.from(
+    new Set(asignaciones.map((fila) => `${fila.apellidosProfesor} ${fila.nombresProfesor}`)),
+  ).map((docente) => ({
     label: docente,
     value: docente,
   }))
 
-  const filasFiltradas = filasAsignaciones.filter((fila) => {
+  const filasFiltradas = asignaciones.filter((fila) => {
     const term = busqueda.trim().toLowerCase()
+    const nombreDocente = `${fila.apellidosProfesor} ${fila.nombresProfesor}`
+    const cursoNombre = fila.nombreCurso
     const matchesTexto =
       term === '' ||
-      String(fila.docente).toLowerCase().includes(term) ||
-      String(fila.curso).toLowerCase().includes(term)
+      nombreDocente.toLowerCase().includes(term) ||
+      cursoNombre.toLowerCase().includes(term)
 
-    const matchesDocente = filtroDocente === '' || String(fila.docente) === filtroDocente
-    const matchesCurso = filtroCurso === '' || String(fila.curso) === filtroCurso
+    const matchesDocente = filtroDocente === '' || nombreDocente === filtroDocente
+    const matchesCurso = filtroCurso === '' || cursoNombre === filtroCurso
 
     return matchesTexto && matchesDocente && matchesCurso
   })
@@ -75,10 +71,22 @@ export default function Page() {
   const filasPaginadas = filasFiltradas
     .slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE)
     .map((fila) => ({
-      ...fila,
-      docente: <span className="font-bold uppercase text-gray-900">{fila.docente}</span>,
-      curso: <Etiquetas variant="outline">{fila.curso}</Etiquetas>,
-      fecha: <span className="text-xs font-bold text-gray-700 uppercase">{fila.fecha}</span>,
+      id: fila.idProfesorSeccion,
+      docente: (
+        <span className="font-bold uppercase text-gray-900">
+          [{fila.apellidosProfesor} {fila.nombresProfesor}]
+        </span>
+      ),
+      curso: (
+        <Etiquetas variant="outline">
+          {fila.nombreCurso} / {fila.nombreSeccion}
+        </Etiquetas>
+      ),
+      fecha: (
+        <span className="text-xs font-bold text-gray-700 uppercase">
+          {new Date(fila.fecAsignacion).toLocaleDateString('es-PE')}
+        </span>
+      ),
     }))
 
   const paginasVisibles = (() => {
@@ -100,6 +108,29 @@ export default function Page() {
   const handleBuscar = () => {
     setPaginaActual(0)
   }
+
+  const cargarAsignaciones = async () => {
+    setLoadingAsignaciones(true)
+    setFetchError('')
+
+    try {
+      const response = await listarProfesoresSeccionSolicitud({}, getToken())
+      setAsignaciones(response.datos ?? [])
+    } catch (error) {
+      setFetchError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar las asignaciones activas.',
+      )
+      setAsignaciones([])
+    } finally {
+      setLoadingAsignaciones(false)
+    }
+  }
+
+  useEffect(() => {
+    cargarAsignaciones()
+  }, [])
 
   const handlePageClick = (pagina: number) => {
     if (pagina !== paginaActual) {
@@ -303,21 +334,31 @@ export default function Page() {
           </div>
 
           <div className="bg-white border-2 border-black overflow-x-auto shadow-[8px_8px_0_0_rgba(0,0,0,1)] mb-4 text-gray-900">
-            <Tabla
-              columns={columnasAsignaciones}
-              rows={filasPaginadas}
-              renderAction={() => (
-                <div className="flex justify-center">
-                  <button
-                    title="Desvincular Profesor"
-                    className="min-w-14 h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all text-[10px] font-bold uppercase cursor-pointer active:scale-[0.95] text-gray-900"
-                  >
-                    Del
-                  </button>
-                </div>
-              )}
-              className="max-w-none mx-0 space-y-0"
-            />
+            {loadingAsignaciones ? (
+              <div className="p-6 text-center text-sm font-bold uppercase text-gray-500">
+                Cargando asignaciones activas...
+              </div>
+            ) : fetchError ? (
+              <div className="p-6 text-center text-sm font-bold uppercase text-red-600">
+                {fetchError}
+              </div>
+            ) : (
+              <Tabla
+                columns={columnasAsignaciones}
+                rows={filasPaginadas}
+                renderAction={() => (
+                  <div className="flex justify-center">
+                    <button
+                      title="Desvincular Profesor"
+                      className="min-w-14 h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all text-[10px] font-bold uppercase cursor-pointer active:scale-[0.95] text-gray-900"
+                    >
+                      Del
+                    </button>
+                  </div>
+                )}
+                className="max-w-none mx-0 space-y-0"
+              />
+            )}
 
             <div className="p-4 border-t-2 border-black flex items-center justify-between bg-white">
               <span className="text-xs font-bold uppercase text-gray-500">
