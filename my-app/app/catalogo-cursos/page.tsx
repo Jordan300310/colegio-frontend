@@ -26,12 +26,20 @@ const Page = () => {
     return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
   }
 
+  const getSortParam = () => {
+    if (orden === 'Alfabético') return ['desNombre,asc']
+    return ['fecCreacion,desc']
+  }
+
   const cargarCursos = async (pageNumber = 0) => {
     setLoading(true)
     setError('')
 
     try {
-      const response = await listarMisCursosSolicitud({ page: pageNumber, size: PAGE_SIZE }, getToken())
+      const response = await listarMisCursosSolicitud(
+        { page: pageNumber, size: PAGE_SIZE, sort: getSortParam() },
+        getToken(),
+      )
       const datos = response.datos
       if (datos && Array.isArray(datos.content)) {
         setCursos(datos.content)
@@ -59,10 +67,9 @@ const Page = () => {
     cargarCursos(0)
   }, [])
 
-  const handleBuscar = () => {
-    setPaginaActual(0)
+  useEffect(() => {
     cargarCursos(0)
-  }
+  }, [orden])
 
   const categoriasDisponibles = Array.from(new Set(cursos.map((curso) => curso.desNivel)))
   const cursosFiltrados = cursos.filter((curso) => {
@@ -174,7 +181,7 @@ const Page = () => {
               <div className="col-span-full rounded border-2 border-black bg-white p-12 text-center text-sm font-bold uppercase text-gray-500">
                 Cargando cursos...
               </div>
-            ) : cursos.length === 0 ? (
+            ) : cursosOrdenados.length === 0 ? (
               <div className="col-span-full rounded border-2 border-black bg-white p-12 text-center text-sm font-bold uppercase text-gray-500">
                 No se encontraron cursos.
               </div>

@@ -202,6 +202,91 @@ export async function listarSeccionesPorAnioSolicitud(
   return response.json()
 }
 
+export interface ProfesorSeccionQuery {
+  idProfesor?: number
+  idSeccion?: number
+  idCurso?: number
+  idAnio?: number
+}
+
+export interface ProfesorSeccionResponseData {
+  idProfesorSeccion: number
+  idProfesor: number
+  nombresProfesor: string
+  apellidosProfesor: string
+  correoProfesor: string
+  idSeccion: number
+  nombreSeccion: string
+  idCurso: number
+  nombreCurso: string
+  idAnioEscolar: number
+  valAnio: number
+  fecAsignacion: string
+}
+
+export async function listarSeccionesSinProfesorSolicitud(
+  token?: string,
+): Promise<LoginResponse<SeccionDetalleResponseData[]>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const url = `${BASE_URL}${SECCIONES_PATH}/secciones/sin-profesor`
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers,
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al listar secciones sin profesor: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
+export async function listarSeccionesProfesorSeccionSolicitud(
+  query: ProfesorSeccionQuery = {},
+  token?: string,
+): Promise<LoginResponse<ProfesorSeccionResponseData[]>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const params = new URLSearchParams()
+  if (query.idProfesor !== undefined) params.append('idProfesor', String(query.idProfesor))
+  if (query.idSeccion !== undefined) params.append('idSeccion', String(query.idSeccion))
+  if (query.idCurso !== undefined) params.append('idCurso', String(query.idCurso))
+  if (query.idAnio !== undefined) params.append('idAnio', String(query.idAnio))
+
+  const url = `${BASE_URL}${SECCIONES_PATH}/profesor-seccion${params.toString() ? `?${params.toString()}` : ''}`
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers,
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al listar profesor-sección: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
 export async function crearSeccionSolicitud(
   data: CrearSeccionData,
   token?: string,
@@ -286,6 +371,42 @@ export async function asignarProfesorSeccionSolicitud(
     const errorText = await response.text()
     throw new Error(
       `Error al asignar profesor a sección: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
+export interface AsignarProfesorSeccionesData {
+  idsSeccion: number[]
+}
+
+export async function asignarProfesorSeccionesSolicitud(
+  idProfesor: number,
+  data: AsignarProfesorSeccionesData,
+  token?: string,
+): Promise<LoginResponse<SeccionDetalleResponseData[]>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(
+    `${BASE_URL}${SECCIONES_PATH}/profesor/${idProfesor}/secciones`,
+    {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    },
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al asignar profesor a secciones: ${response.status} ${response.statusText} - ${errorText}`,
     )
   }
 

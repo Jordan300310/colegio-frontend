@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import CampoCheckbox from '../componentes/CampoCheckbox'
@@ -12,6 +12,16 @@ import {
   listarProfesoresSeccionSolicitud,
   ProfesorSeccionData,
 } from '../../lib/api/login/profesores'
+import {
+  listarUsuariosSolicitud,
+  UsuarioRolResponseData,
+} from '../../lib/api/login/usuarios'
+import {
+  listarSeccionesSinProfesorSolicitud,
+  asignarProfesorSeccionesSolicitud,
+  removerProfesorSeccionSolicitud,
+  SeccionDetalleResponseData,
+} from '../../lib/api/login/secciones'
 
 const PAGE_SIZE = 10
 
@@ -36,6 +46,39 @@ export default function Page() {
   const [asignaciones, setAsignaciones] = useState<AsignacionData[]>([])
   const [loadingAsignaciones, setLoadingAsignaciones] = useState(false)
   const [fetchError, setFetchError] = useState('')
+  const [docentes, setDocentes] = useState<UsuarioRolResponseData[]>([])
+  const [loadingDocentes, setLoadingDocentes] = useState(false)
+  const [docenteError, setDocenteError] = useState('')
+  const [seccionesDisponibles, setSeccionesDisponibles] = useState<SeccionDetalleResponseData[]>([])
+  const [loadingSeccionesDisponibles, setLoadingSeccionesDisponibles] = useState(false)
+  const [seccionesDisponiblesError, setSeccionesDisponiblesError] = useState('')
+
+  // 1. ESTADOS
+  const [docenteBusqueda, setDocenteBusqueda] = useState('')
+  const [selectedDocenteId, setSelectedDocenteId] = useState<number | null>(null)
+  const [seccionesSeleccionadas, setSeccionesSeleccionadas] = useState<string[]>([])
+
+  // Mock de datos (Esto vendría de tu API / backend)
+
+  // 2. LÓGICA DE FILTRADO (Live Search más eficiente que presionar un botón)
+  const docentesFiltrados = useMemo(() => {
+    if (!docenteBusqueda) return [];
+    return docentes.filter((d) =>
+      `${d.nombres} ${d.apellidos}`.toLowerCase().includes(docenteBusqueda.toLowerCase())
+    );
+  }, [docenteBusqueda, docentes]);
+
+  // 3. HANDLERS
+  const toggleSeccion = (idSeccion: string) => {
+    setSeccionesSeleccionadas((prev) =>
+      prev.includes(idSeccion)
+        ? prev.filter((id) => id !== idSeccion)
+        : [...prev, idSeccion]
+    )
+  }
+
+  const docenteSeleccionadoObj = docentes.find(d => d.idUsuario === selectedDocenteId);
+
 
   const cursosDisponibles = Array.from(new Set(asignaciones.map((fila) => fila.nombreCurso))).map((curso) => ({
     label: curso,
@@ -72,6 +115,7 @@ export default function Page() {
     .slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE)
     .map((fila) => ({
       id: fila.idProfesorSeccion,
+      idSeccion: fila.idSeccion,
       docente: (
         <span className="font-bold uppercase text-gray-900">
           [{fila.apellidosProfesor} {fila.nombresProfesor}]
@@ -109,6 +153,53 @@ export default function Page() {
     setPaginaActual(0)
   }
 
+  const cargarDocentes = async (busqueda = '') => {
+    setLoadingDocentes(true)
+    setDocenteError('')
+
+    try {
+      const response = await listarUsuariosSolicitud(
+        { rol: 'ROL_PROFESOR', busqueda: busqueda.trim().toLowerCase(), size: 1000 },
+        getToken(),
+      )
+
+      const datos = response.datos
+      if (datos && Array.isArray(datos.content)) {
+        setDocentes(datos.content)
+      } else {
+        setDocentes([])
+      }
+    } catch (error) {
+      setDocenteError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar los docentes.',
+      )
+      setDocentes([])
+    } finally {
+      setLoadingDocentes(false)
+    }
+  }
+
+  const cargarSeccionesDisponibles = async () => {
+    setLoadingSeccionesDisponibles(true)
+    setSeccionesDisponiblesError('')
+
+    try {
+      const response = await listarSeccionesSinProfesorSolicitud(getToken())
+      setSeccionesDisponibles(response.datos ?? [])
+    } catch (error) {
+      setSeccionesDisponiblesError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar las secciones disponibles.',
+      )
+      setSeccionesDisponibles([])
+    } finally {
+      setLoadingSeccionesDisponibles(false)
+    }
+  }
+
   const cargarAsignaciones = async () => {
     setLoadingAsignaciones(true)
     setFetchError('')
@@ -130,11 +221,61 @@ export default function Page() {
 
   useEffect(() => {
     cargarAsignaciones()
+    cargarDocentes()
+    cargarSeccionesDisponibles()
   }, [])
 
   const handlePageClick = (pagina: number) => {
     if (pagina !== paginaActual) {
       setPaginaActual(pagina)
+    }
+  }
+
+  const handleRemoverProfesor = async (idSeccion: number) => {
+    setLoadingAsignaciones(true)
+    setFetchError('')
+
+    try {
+      await removerProfesorSeccionSolicitud(idSeccion, getToken())
+      await cargarAsignaciones()
+      await cargarSeccionesDisponibles()
+    } catch (error) {
+      setFetchError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo remover el profesor de la sección.',
+      )
+    } finally {
+      setLoadingAsignaciones(false)
+    }
+  }
+
+  const handleConfirmarAsignacion = async () => {
+    if (!selectedDocenteId || seccionesSeleccionadas.length === 0) return
+
+    setLoadingAsignaciones(true)
+    setFetchError('')
+
+    try {
+      await asignarProfesorSeccionesSolicitud(
+        selectedDocenteId,
+        {
+          idsSeccion: seccionesSeleccionadas.map((id) => Number(id)),
+        },
+        getToken(),
+      )
+
+      setSeccionesSeleccionadas([])
+      await cargarAsignaciones()
+      await cargarSeccionesDisponibles()
+    } catch (error) {
+      setFetchError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo asignar el profesor a las secciones.',
+      )
+    } finally {
+      setLoadingAsignaciones(false)
     }
   }
 
@@ -166,95 +307,132 @@ export default function Page() {
             </p>
           </div>
 
-          <div className="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative text-gray-900">
+          <div className="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative text-gray-900 max-w-5xl mx-auto">
             <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black z-10">
               Nueva Asignación Masiva
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-4">
+              {/* ==========================================
+            PASO 1: SELECCIONAR DOCENTE
+        ========================================== */}
               <div>
                 <h2 className="text-lg font-bold uppercase mb-4 border-b-2 border-dashed border-gray-400 inline-block pb-1 text-gray-900">
                   1. Seleccionar Docente
                 </h2>
 
-                <div className="mb-6">
-                  <CampoTexto
-                    field={{
-                      type: 'search',
-                      name: 'buscarProfesor',
-                      label: 'Buscar docente',
-                      placeholder: 'BUSCAR PROFESOR...',
-                      icon: 'fa-solid fa-search',
-                    }}
-                  />
-                </div>
-
-                <div className="bg-gray-100 border-2 border-black p-4 flex items-center space-x-4 text-gray-900">
-                  <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center text-xl">
-                    <i className="fa-solid fa-chalkboard-user"></i>
+                {/* Si ya hay un docente seleccionado, mostramos su tarjeta directamente */}
+                {selectedDocenteId ? (
+                  <div className="bg-gray-100 border-2 border-black p-4 text-gray-900 relative">
+                    <button
+                      onClick={() => setSelectedDocenteId(null)}
+                      className="absolute top-2 right-2 text-red-600 hover:text-red-800 font-bold"
+                      title="Cambiar docente"
+                    >
+                      <i className="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center text-xl">
+                        <i className="fa-solid fa-chalkboard-user"></i>
+                      </div>
+                      <div>
+                        <p className="font-bold uppercase tracking-widest text-sm text-gray-900">
+                          Docente asignado
+                        </p>
+                        <p className="text-xs font-bold text-gray-700 uppercase">
+                          {docenteSeleccionadoObj?.apellidos ?? ''} {docenteSeleccionadoObj?.nombres ?? ''}
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                ) : (
+                  /* Si no hay docente, mostramos el buscador interactivo */
+                  <div className="mb-6 flex flex-col gap-2">
+                    <CampoTexto
+                      field={{
+                        type: 'search',
+                        name: 'buscarProfesor',
+                        label: 'Buscar docente',
+                        placeholder: 'Ej. Mendoza...',
+                        icon: 'fa-solid fa-search',
+                      }}
+                      value={docenteBusqueda}
+                      onChange={(_, value) => setDocenteBusqueda(value)}
+                    />
 
-                  <div>
-                    <p className="font-bold uppercase tracking-widest text-sm text-gray-900">
-                      [ ING. CARLOS MENDOZA ]
-                    </p>
-                    <p className="text-xs font-bold text-gray-700 uppercase">
-                      cmendoza@colegio.edu.pe
-                    </p>
+                    {/* Lista dinámica de resultados de búsqueda */}
+                    {docenteBusqueda && (
+                      <div className="border-2 border-black bg-white max-h-40 overflow-y-auto mt-1">
+                        {docentesFiltrados.length > 0 ? (
+                          docentesFiltrados.map((doc) => (
+                            <div
+                              key={doc.idUsuario}
+                              onClick={() => {
+                                setSelectedDocenteId(doc.idUsuario);
+                                setDocenteBusqueda(''); // Limpiamos la búsqueda
+                              }}
+                              className="p-2 border-b-2 border-gray-200 hover:bg-gray-100 cursor-pointer text-sm font-bold uppercase transition-colors"
+                            >
+                              {doc.apellidos}, {doc.nombres}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-3 text-sm text-gray-500 italic">No se encontraron docentes.</div>
+                        )}
+                      </div>
+                    )}
                   </div>
-
-                  <button className="ml-auto text-xs font-bold uppercase border-b-2 border-black hover:text-gray-600 cursor-pointer transition-all">
-                    Cambiar
-                  </button>
-                </div>
+                )}
               </div>
 
+              {/* ==========================================
+            PASO 2: ASIGNAR SECCIONES
+        ========================================== */}
               <div>
                 <h2 className="text-lg font-bold uppercase mb-4 border-b-2 border-dashed border-gray-400 inline-block pb-1 text-gray-900">
                   2. Asignar Secciones
                 </h2>
 
                 <div className="border-2 border-black bg-white h-48 overflow-y-auto p-3 space-y-3 text-gray-900">
-                  <div className="bg-gray-100 border-2 border-black p-3">
-                    <CampoCheckbox
-                      field={{
-                        type: 'checkbox',
-                        name: 'sec1',
-                        label: '4TO "B" - JAVA SPRING BOOT',
-                      }}
-                      value={true}
-                    />
-                    <p className="text-[10px] font-bold text-gray-700 uppercase ml-7 mt-1">
-                      28 Alumnos inscritos
-                    </p>
-                  </div>
+                  {/* Renderizado dinámico de la lista de secciones usando .map() */}
+                  {seccionesDisponibles.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-500 uppercase">
+                      {loadingSeccionesDisponibles
+                        ? 'Cargando secciones disponibles...'
+                        : seccionesDisponiblesError
+                          ? seccionesDisponiblesError
+                          : 'No hay secciones disponibles para asignar.'}
+                    </div>
+                  ) : (
+                    seccionesDisponibles.map((sec) => {
+                      const idKey = String(sec.idSeccion)
+                      const estaSeleccionada = seccionesSeleccionadas.includes(idKey)
 
-                  <div className="border-2 border-gray-300 p-3 bg-white">
-                    <CampoCheckbox
-                      field={{
-                        type: 'checkbox',
-                        name: 'sec2',
-                        label: '5TO "ÚNICA" - BASE DE DATOS',
-                      }}
-                    />
-                    <p className="text-[10px] font-bold text-gray-700 uppercase ml-7 mt-1">
-                      25 Alumnos inscritos
-                    </p>
-                  </div>
-
-                  <div className="border-2 border-dashed border-gray-400 bg-gray-50 p-3 opacity-70">
-                    <CampoCheckbox
-                      field={{
-                        type: 'checkbox',
-                        name: 'sec3',
-                        label: '3RO "A" - LÓGICA DIGITAL',
-                        disabled: true,
-                      }}
-                    />
-                    <p className="text-[10px] font-bold text-gray-700 uppercase ml-7 mt-1">
-                      Ya asignada a [ Lic. Ana R. ]
-                    </p>
-                  </div>
+                      return (
+                        <div
+                          key={sec.idSeccion}
+                          className={`border-2 p-3 transition-colors ${estaSeleccionada
+                              ? 'bg-gray-100 border-black'
+                              : 'border-gray-300 bg-white hover:border-black'
+                            }`}
+                        >
+                          <CampoCheckbox
+                            field={{
+                              type: 'checkbox',
+                              name: idKey,
+                              label: `${sec.desNombre} - ${sec.valAnio}`,
+                              disabled: false,
+                            }}
+                            value={estaSeleccionada}
+                            onChange={() => toggleSeccion(idKey)}
+                          />
+                          <p className="text-[10px] font-bold text-gray-700 uppercase ml-7 mt-1">
+                            {`Curso ${sec.desCurso} · ID Sección ${sec.idSeccion}`}
+                          </p>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
 
                 <p className="text-[10px] font-bold text-gray-700 uppercase mt-2 text-right">
@@ -263,13 +441,22 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t-4 border-black text-right">
+            {/* ==========================================
+          BOTÓN DE CONFIRMACIÓN REACTIVO
+      ========================================== */}
+            <div className="mt-8 pt-6 border-t-4 border-black flex justify-between items-center">
+              <p className="text-sm font-bold text-red-600">
+                {!selectedDocenteId && '* Debe seleccionar un docente primero'}
+              </p>
+
               <Boton
                 variant="primary"
                 size="md"
                 className="cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.97]"
+                disabled={!selectedDocenteId || seccionesSeleccionadas.length === 0}
+                onClick={handleConfirmarAsignacion}
               >
-                Confirmar Asignación (2 Secciones)
+                Confirmar Asignación ({seccionesSeleccionadas.length} Secciones)
               </Boton>
             </div>
           </div>
@@ -346,9 +533,15 @@ export default function Page() {
               <Tabla
                 columns={columnasAsignaciones}
                 rows={filasPaginadas}
-                renderAction={() => (
+                renderAction={(row) => (
                   <div className="flex justify-center">
                     <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm('Esta acción no se puede deshacer. ¿Desea continuar?')) {
+                          handleRemoverProfesor(Number(row.idSeccion))
+                        }
+                      }}
                       title="Desvincular Profesor"
                       className="min-w-14 h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-all text-[10px] font-bold uppercase cursor-pointer active:scale-[0.95] text-gray-900"
                     >

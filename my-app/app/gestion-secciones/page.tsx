@@ -16,6 +16,10 @@ import {
   ResumenAnioEscolarResponseData,
   obtenerResumenAnioEscolarSolicitud,
 } from '../../lib/api/login/ano_escolar'
+import {
+  listarUsuariosSolicitud,
+  UsuarioRolResponseData,
+} from '../../lib/api/login/usuarios'
 
 const PAGE_SIZE = 10
 
@@ -38,6 +42,7 @@ const page = () => {
   const [busqueda, setBusqueda] = useState('')
   const [filtroCurso, setFiltroCurso] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
+  const [busquedaAlumno, setBusquedaAlumno] = useState('')
 
   const [filtrosAplicados, setFiltrosAplicados] = useState({
     busqueda: '',
@@ -101,10 +106,35 @@ const page = () => {
   const [creatingSeccion, setCreatingSeccion] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [showCrearModal, setShowCrearModal] = useState(false)
+  const [showVincularModal, setShowVincularModal] = useState(false)
+  const [alumnosVinculados, setAlumnosVinculados] = useState<UsuarioRolResponseData[]>([])
+  const [alumnosDisponibles, setAlumnosDisponibles] = useState<UsuarioRolResponseData[]>([])
 
   const getToken = () => {
     if (typeof window === 'undefined') return ''
     return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  const cargarAlumnosDisponibles = async () => {
+    setErrorMessage('')
+
+    try {
+      const response = await listarUsuariosSolicitud({ sinSeccion: true, size: 1000 }, getToken())
+      const datos = response.datos
+      if (datos && Array.isArray(datos.content)) {
+        setAlumnosDisponibles(datos.content)
+      } else {
+        setAlumnosDisponibles([])
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar los alumnos disponibles.',
+      )
+      setAlumnosDisponibles([])
+    }
   }
 
   const cargarAniosEscolares = async (seccionesCargadas: SeccionDetalleResponseData[]) => {
@@ -170,6 +200,7 @@ const page = () => {
       await loadCursos()
       const seccionesCargadas = await cargarSecciones(0)
       await cargarAniosEscolares(seccionesCargadas)
+      await cargarAlumnosDisponibles()
     }
 
     loadInicial()
@@ -222,6 +253,27 @@ const page = () => {
     }
   }
 
+  const openCrearModal = () => {
+    setErrorMessage('')
+    setStatusMessage('')
+    setShowCrearModal(true)
+  }
+
+  const closeCrearModal = () => {
+    setShowCrearModal(false)
+  }
+
+  const openVincularModal = (seccionId: number) => {
+    setErrorMessage('')
+    setStatusMessage('')
+    setSeccionVincular(String(seccionId))
+    setShowVincularModal(true)
+  }
+
+  const closeVincularModal = () => {
+    setShowVincularModal(false)
+  }
+
   const handleCreateSection = async () => {
     setStatusMessage('')
     setErrorMessage('')
@@ -248,6 +300,7 @@ const page = () => {
         setNombreGrupo('')
         setAnioEscolar('')
         setCursoSeleccionado('')
+        setShowCrearModal(false)
         cargarSecciones(0)
       } else {
         setErrorMessage(result.mensaje || 'No se pudo crear la sección.')
@@ -262,6 +315,34 @@ const page = () => {
       setCreatingSeccion(false)
     }
   }
+
+  const handleVincularAlumno = (idUsuario: number) => {
+    const alumno = alumnosDisponibles.find((alumno) => alumno.idUsuario === idUsuario)
+    if (!alumno) return
+
+    setAlumnosDisponibles((prev) => prev.filter((item) => item.idUsuario !== idUsuario))
+    setAlumnosVinculados((prev) => [...prev, alumno])
+  }
+
+  const handleDesvincularAlumno = (idUsuario: number) => {
+    const alumno = alumnosVinculados.find((alumno) => alumno.idUsuario === idUsuario)
+    if (!alumno) return
+
+    setAlumnosVinculados((prev) => prev.filter((item) => item.idUsuario !== idUsuario))
+    setAlumnosDisponibles((prev) => [...prev, alumno])
+  }
+
+  const alumnosVinculadosFiltrados = alumnosVinculados.filter((a) =>
+    a.nombres.toLowerCase().includes(busquedaAlumno.toLowerCase()) ||
+    a.apellidos.toLowerCase().includes(busquedaAlumno.toLowerCase()) ||
+    a.correo.toLowerCase().includes(busquedaAlumno.toLowerCase()),
+  )
+
+  const alumnosDisponiblesFiltrados = alumnosDisponibles.filter((a) =>
+    a.nombres.toLowerCase().includes(busquedaAlumno.toLowerCase()) ||
+    a.apellidos.toLowerCase().includes(busquedaAlumno.toLowerCase()) ||
+    a.correo.toLowerCase().includes(busquedaAlumno.toLowerCase()),
+  )
 
   return (
     <>
@@ -291,86 +372,21 @@ const page = () => {
             </p>
           </div>
 
-          <div className="bg-white border-4 border-black p-6 md:p-8 mb-12 shadow-[12px_12px_0_0_rgba(0,0,0,1)] relative text-gray-900">
-            <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black z-10">
-              Crear Nueva Sección
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-              <CampoTexto
-                field={{
-                  type: 'text',
-                  name: 'nombreGrupo',
-                  label: 'Nombre del Grupo',
-                  placeholder: 'Ej: Taller de Programación - A',
-                }}
-                value={nombreGrupo}
-                onChange={(_, value) => setNombreGrupo(value)}
-              />
-
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'anioEscolar',
-                  label: 'Año Escolar',
-                  options: aniosEscolares.map((anio) => ({
-                    label: `${anio.valAnio} - ${anio.desDescripcion}`,
-                    value: String(anio.idAnioEscolar),
-                  })),
-                }}
-                value={anioEscolar}
-                onChange={(_, value) => setAnioEscolar(value)}
-              />
-
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'curso',
-                  label: 'Curso',
-                  options: cursos.map((curso) => ({
-                    label: curso.desNombre,
-                    value: String(curso.idCurso),
-                  })),
-                }}
-                value={cursoSeleccionado}
-                onChange={(_, value) => setCursoSeleccionado(value)}
-              />
-            </div>
-
-            {loadingCursos ? (
-              <div className="mt-4 text-sm text-gray-600">Cargando cursos publicados...</div>
-            ) : null}
-
-            {statusMessage ? (
-              <div className="mt-4 rounded border border-green-600 bg-green-50 px-4 py-3 text-sm text-green-800">
-                {statusMessage}
-              </div>
-            ) : null}
-
-            {errorMessage ? (
-              <div className="mt-4 rounded border border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">
-                {errorMessage}
-              </div>
-            ) : null}
-
-            <div className="mt-8 pt-6 border-t-4 border-black text-right">
-              <Boton
-                type="button"
-                variant="primary"
-                size="md"
-                icon={<span className="text-sm">＋</span>}
-                onClick={handleCreateSection}
-                disabled={creatingSeccion}
-              >
-                {creatingSeccion ? 'Creando sección...' : 'Crear Nueva Sección'}
-              </Boton>
-            </div>
-          </div>
-
           <div className="flex justify-between items-end mb-4 gap-4">
             <h2 className="text-xl font-bold uppercase bg-black text-white inline-block px-3 py-1">
               Secciones Disponibles
             </h2>
+
+            <Boton
+              variant="primary"
+              onClick={openCrearModal}
+              title="Crear nueva sección"
+              type="button"
+              size="md"
+              icon={<span className="text-sm">＋</span>}
+            >
+              Crear nueva sección
+            </Boton>
           </div>
 
           <div className="mb-8 bg-white border-2 border-black p-4 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
@@ -417,7 +433,7 @@ const page = () => {
               />
             </div>
 
-            <div className="flex items-end">
+            <div className="flex items-end gap-4">
               <Boton
                 variant="primary"
                 size="md"
@@ -438,23 +454,22 @@ const page = () => {
               <Tabla
                 columns={columnas}
                 rows={filas}
-                renderAction={() => (
-                  <div className="flex justify-center gap-2">
-                    <button
-                      title="Vincular alumnos"
-                      className="min-w-13 h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase cursor-pointer text-gray-900"
-                    >
-                      Vinc
-                    </button>
+                renderAction={(row) => {
+                  const seccionId = Number(row.id)
+                  return (
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openVincularModal(seccionId)}
+                        title="Vincular alumnos"
+                        className="min-w-13 h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase cursor-pointer text-gray-900"
+                      >
+                        Vinc
+                      </button>
 
-                    <button
-                      title="Editar sección"
-                      className="min-w-13 h-8 px-2 border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors text-[10px] font-bold uppercase cursor-pointer text-gray-900"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                )}
+                    </div>
+                  )
+                }}
                 className="max-w-none mx-0 space-y-0"
               />
             )}
@@ -500,68 +515,221 @@ const page = () => {
             </div>
           </div>
 
-          <div className="bg-white border-2 border-black mt-10 p-6 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative text-gray-900">
-            <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black">
-              Vincular Alumnos
-            </div>
+          {showCrearModal ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="relative w-full max-w-3xl bg-white border-4 border-black shadow-[12px_12px_0_0_rgba(0,0,0,1)] p-6">
+                <button
+                  type="button"
+                  onClick={closeCrearModal}
+                  className="absolute right-4 top-4 text-black border-2 border-black rounded-full w-8 h-8 flex items-center justify-center hover:bg-black hover:text-white"
+                >
+                  ×
+                </button>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'seccionVincular',
-                  label: 'Seleccionar Sección',
-                  options: secciones.map((seccion) => ({
-                    value: String(seccion.idSeccion),
-                    label: seccion.desNombre,
-                  })),
-                }}
-                value={seccionVincular}
-                onChange={(_, value) => setSeccionVincular(value)}
-              />
-
-              <CampoTexto
-                field={{
-                  type: 'search',
-                  name: 'buscarAlumno',
-                  label: 'Buscar Alumno',
-                  placeholder: 'BUSCAR ALUMNO SIN SECCIÓN...',
-                  icon: 'fa-solid fa-search',
-                }}
-              />
-            </div>
-
-            <div className="mt-6 bg-gray-50 border-2 border-dashed border-gray-400 p-4 text-gray-900">
-              <p className="text-xs font-bold uppercase text-gray-700 mb-2">
-                Alumnos disponibles para vincular
-              </p>
-
-              <div className="space-y-2">
-                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm text-gray-900">
-                  [ ALUMNO 1 ] - alumno1@colegio.edu.pe
+                <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black">
+                  Crear Nueva Sección
                 </div>
-                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm text-gray-900">
-                  [ ALUMNO 2 ] - alumno2@colegio.edu.pe
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                  <CampoTexto
+                    field={{
+                      type: 'text',
+                      name: 'nombreGrupo',
+                      label: 'Nombre del Grupo',
+                      placeholder: 'Ej: Taller de Programación - A',
+                    }}
+                    value={nombreGrupo}
+                    onChange={(_, value) => setNombreGrupo(value)}
+                  />
+
+                  <CampoSelect
+                    field={{
+                      type: 'select',
+                      name: 'anioEscolar',
+                      label: 'Año Escolar',
+                      options: aniosEscolares.map((anio) => ({
+                        label: `${anio.valAnio} - ${anio.desDescripcion}`,
+                        value: String(anio.idAnioEscolar),
+                      })),
+                    }}
+                    value={anioEscolar}
+                    onChange={(_, value) => setAnioEscolar(value)}
+                  />
+
+                  <CampoSelect
+                    field={{
+                      type: 'select',
+                      name: 'curso',
+                      label: 'Curso',
+                      options: cursos.map((curso) => ({
+                        label: curso.desNombre,
+                        value: String(curso.idCurso),
+                      })),
+                    }}
+                    value={cursoSeleccionado}
+                    onChange={(_, value) => setCursoSeleccionado(value)}
+                  />
                 </div>
-                <div className="border-2 border-black bg-white px-4 py-3 font-bold uppercase text-sm text-gray-900">
-                  [ ALUMNO 3 ] - alumno3@colegio.edu.pe
+
+                {loadingCursos ? (
+                  <div className="mt-4 text-sm text-gray-600">Cargando cursos publicados...</div>
+                ) : null}
+
+                {statusMessage ? (
+                  <div className="mt-4 rounded border border-green-600 bg-green-50 px-4 py-3 text-sm text-green-800">
+                    {statusMessage}
+                  </div>
+                ) : null}
+
+                {errorMessage ? (
+                  <div className="mt-4 rounded border border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">
+                    {errorMessage}
+                  </div>
+                ) : null}
+
+                <div className="mt-8 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={closeCrearModal}
+                    className="border-2 border-black px-4 py-2 font-bold uppercase text-sm hover:bg-gray-200"
+                  >
+                    Cancelar
+                  </button>
+                  <Boton
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    icon={<span className="text-sm">＋</span>}
+                    onClick={handleCreateSection}
+                    disabled={creatingSeccion}
+                  >
+                    {creatingSeccion ? 'Creando sección...' : 'Crear Nueva Sección'}
+                  </Boton>
                 </div>
               </div>
             </div>
+          ) : null}
 
-            <div className="mt-8 pt-6 border-t-4 border-black text-right">
-              <Boton
-                type="button"
-                variant="primary"
-                size="md"
-                icon={<span className="text-sm">＋</span>}
-                onClick={() => { /* Lógica para vincular alumnos a la sección seleccionada */ }}
-                disabled={creatingSeccion}
-              >
-                {creatingSeccion ? 'Vinculando...' : 'Vincular Alumnos'}
-              </Boton>
+          {showVincularModal ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+              <div className="relative w-full max-w-5xl bg-white border-4 border-black shadow-[12px_12px_0_0_rgba(0,0,0,1)] p-6 text-gray-900">
+                <button
+                  type="button"
+                  onClick={closeVincularModal}
+                  className="absolute right-4 top-4 text-black border-2 border-black rounded-full w-8 h-8 flex items-center justify-center hover:bg-black hover:text-white"
+                >
+                  ×
+                </button>
+
+                <div className="absolute -top-4 -left-4 bg-black text-white px-4 py-1 text-xs font-bold uppercase border-2 border-black">
+                  Vincular Alumnos
+                </div>
+
+                <p className="text-sm uppercase font-bold text-gray-700 mb-4">
+                  Sección: {secciones.find((s) => String(s.idSeccion) === seccionVincular)?.desNombre ?? 'Sin sección seleccionada'}
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                  <CampoSelect
+                    field={{
+                      type: 'select',
+                      name: 'seccionVincular',
+                      label: 'Seleccionar Sección',
+                      options: secciones.map((seccion) => ({
+                        value: String(seccion.idSeccion),
+                        label: seccion.desNombre,
+                      })),
+                    }}
+                    value={seccionVincular}
+                    onChange={(_, value) => setSeccionVincular(value)}
+                  />
+
+                  <CampoTexto
+                    field={{
+                      type: 'search',
+                      name: 'buscarAlumno',
+                      label: 'Buscar Alumno',
+                      placeholder: 'BUSCAR ALUMNO...',
+                      icon: 'fa-solid fa-search',
+                    }}
+                    value={busquedaAlumno}
+                    onChange={(_, value) => setBusquedaAlumno(value)}
+                  />
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 border-2 border-black p-4 text-gray-900">
+                    <p className="text-xs font-bold uppercase text-gray-700 mb-2">
+                      Alumnos Vinculados a la Sección
+                    </p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                      {alumnosVinculadosFiltrados.length > 0 ? (
+                        alumnosVinculadosFiltrados.map((alumno) => (
+                          <div key={alumno.idUsuario} className="border-2 border-black bg-white px-4 py-3 text-sm text-gray-900 flex justify-between items-center group">
+                            <span className="font-bold uppercase">{alumno.apellidos}, {alumno.nombres} <span className="font-normal text-xs normal-case block text-gray-500">{alumno.correo}</span></span>
+                            <button
+                              type="button"
+                              onClick={() => handleDesvincularAlumno(alumno.idUsuario)}
+                              className="text-black hover:text-white hover:bg-red-500 w-8 h-8 flex items-center justify-center border-2 border-black transition-colors"
+                              title="Desvincular"
+                            >
+                              <i className="fa-solid fa-minus"></i>
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No se encontraron alumnos vinculados.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 border-2 border-black p-4 text-gray-900">
+                    <p className="text-xs font-bold uppercase text-gray-700 mb-2">
+                      Alumnos Disponibles
+                    </p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                      {alumnosDisponiblesFiltrados.length > 0 ? (
+                        alumnosDisponiblesFiltrados.map((alumno) => (
+                          <div key={alumno.idUsuario} className="border-2 border-black bg-white px-4 py-3 text-sm text-gray-900 flex justify-between items-center group">
+                            <span className="font-bold uppercase">{alumno.apellidos}, {alumno.nombres} <span className="font-normal text-xs normal-case block text-gray-500">{alumno.correo}</span></span>
+                            <button
+                              type="button"
+                              onClick={() => handleVincularAlumno(alumno.idUsuario)}
+                              className="text-black hover:text-white hover:bg-black w-8 h-8 flex items-center justify-center border-2 border-black transition-colors"
+                              title="Vincular"
+                            >
+                              <i className="fa-solid fa-plus"></i>
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No se encontraron alumnos disponibles.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 flex justify-between items-center border-t-4 border-black pt-6">
+                  <button
+                    type="button"
+                    onClick={closeVincularModal}
+                    className="border-2 border-black px-4 py-2 font-bold uppercase text-sm hover:bg-gray-200"
+                  >
+                    Cerrar
+                  </button>
+                  <Boton
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    icon={<span className="text-sm">＋</span>}
+                    onClick={closeVincularModal}
+                  >
+                    Guardar Cambios
+                  </Boton>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </main>
     </>

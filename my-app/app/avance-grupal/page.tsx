@@ -7,8 +7,20 @@ import CampoSelect from '../componentes/CampoSelect'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
-import { SeccionDetalleResponseData, listarSeccionesSolicitud } from '../../lib/api/login/secciones'
-import { obtenerProgresoSeccionSolicitud, ProgresoSeccionResponseData, AlumnoProgresoData } from '../../lib/api/login/progreso'
+import {
+  SeccionDetalleResponseData,
+  listarSeccionesProfesorSeccionSolicitud,
+  listarAlumnosSeccionSolicitud,
+  ProfesorSeccionResponseData,
+  AlumnoSeccionResponseData,
+} from '../../lib/api/login/secciones'
+import {
+  obtenerProgresoSeccionSolicitud,
+  obtenerProgresoAlumnoCursoSolicitud,
+  ProgresoSeccionResponseData,
+  ProgresoAlumnoCursoResponseData,
+  AlumnoProgresoData,
+} from '../../lib/api/login/progreso'
 
 const PAGE_SIZE = 6
 
@@ -55,8 +67,13 @@ const page = () => {
   const [filtroModulo, setFiltroModulo] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [paginaActual, setPaginaActual] = useState(0)
-  const [secciones, setSecciones] = useState<SeccionDetalleResponseData[]>([])
+  const [seccionesActivas, setSeccionesActivas] = useState<ProfesorSeccionResponseData[]>([])
   const [seccionActiva, setSeccionActiva] = useState('')
+  const [alumnosSeccion, setAlumnosSeccion] = useState<AlumnoSeccionResponseData[]>([])
+  const [alumnoSeleccionado, setAlumnoSeleccionado] = useState('')
+  const [detalleAlumnoProgreso, setDetalleAlumnoProgreso] = useState<ProgresoAlumnoCursoResponseData | null>(null)
+  const [loadingDetalleAlumno, setLoadingDetalleAlumno] = useState(false)
+  const [errorDetalleAlumno, setErrorDetalleAlumno] = useState('')
   const [progreso, setProgreso] = useState<ProgresoSeccionResponseData | null>(null)
   const [alumnos, setAlumnos] = useState<AlumnoProgresoData[]>([])
   const [loadingProgreso, setLoadingProgreso] = useState(false)
@@ -73,19 +90,19 @@ const page = () => {
   }
 
   useEffect(() => {
-    const cargarSecciones = async () => {
+    const cargarSeccionesActivas = async () => {
       try {
-        const response = await listarSeccionesSolicitud({ page: 0, size: 100 }, getToken())
+        const response = await listarSeccionesProfesorSeccionSolicitud({}, getToken())
         const datos = response.datos
-        if (datos && Array.isArray(datos.content)) {
-          setSecciones(datos.content)
+        if (datos && Array.isArray(datos)) {
+          setSeccionesActivas(datos)
         }
       } catch {
-        setSecciones([])
+        setSeccionesActivas([])
       }
     }
 
-    cargarSecciones()
+    cargarSeccionesActivas()
   }, [])
 
   const modulosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.moduloActual)))
@@ -152,43 +169,72 @@ const page = () => {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   })()
 
+  const cargarAlumnosPorSeccion = async (idSeccion: number) => {
+    setErrorDetalleAlumno('')
+    setLoadingDetalleAlumno(true)
+    setAlumnosSeccion([])
+    setAlumnoSeleccionado('')
+    setDetalleAlumnoProgreso(null)
+
+    try {
+      const response = await listarAlumnosSeccionSolicitud(idSeccion, getToken())
+      const datos = response.datos
+      if (Array.isArray(datos)) {
+        setAlumnosSeccion(datos)
+      } else {
+        setAlumnosSeccion([])
+      }
+    } catch (error) {
+      setErrorDetalleAlumno(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar los alumnos de la sección.',
+      )
+      setAlumnosSeccion([])
+    } finally {
+      setLoadingDetalleAlumno(false)
+    }
+  }
+
   const handleBuscar = async () => {
     setPaginaActual(0)
-    if (!seccionActiva) return
+    setErrorProgreso('')
+    setErrorDetalleAlumno('')
+
+    if (!seccionActiva) {
+      setErrorProgreso('Seleccione una sección activa.')
+      return
+    }
+
+    if (!alumnoSeleccionado) {
+      setErrorProgreso('Seleccione un alumno antes de filtrar.')
+      return
+    }
+
+    const seccion = seccionesActivas.find(
+      (sec) => String(sec.idProfesorSeccion) === seccionActiva,
+    )
+
+    if (!seccion) {
+      setErrorProgreso('Seleccione una sección válida.')
+      return
+    }
 
     setLoadingProgreso(true)
-    setErrorProgreso('')
     try {
-      const seccion = secciones.find((sec) => sec.desNombre === seccionActiva)
-      if (!seccion) {
-        setErrorProgreso('Seleccione una sección válida.')
-        setProgreso(null)
-        setAlumnos([])
-        return
-      }
-
-      const response = await obtenerProgresoSeccionSolicitud(
-        seccion.idSeccion,
-        { page: 0, size: PAGE_SIZE, sort: ['porcentaje,desc'] },
+      const response = await obtenerProgresoAlumnoCursoSolicitud(
+        Number(alumnoSeleccionado),
+        seccion.idCurso,
         getToken(),
       )
-
-      const datos = response.datos
-      if (datos) {
-        setProgreso(datos)
-        setAlumnos(datos.alumnos.content)
-      } else {
-        setProgreso(null)
-        setAlumnos([])
-      }
+      setDetalleAlumnoProgreso(response.datos ?? null)
     } catch (error) {
       setErrorProgreso(
         error instanceof Error
           ? error.message
-          : 'No se pudo cargar el progreso de la sección.',
+          : 'No se pudo cargar el progreso del alumno.',
       )
-      setProgreso(null)
-      setAlumnos([])
+      setDetalleAlumnoProgreso(null)
     } finally {
       setLoadingProgreso(false)
     }
@@ -220,7 +266,7 @@ const page = () => {
           </div>
 
           <div className="bg-white border-2 border-black p-6 mb-8 flex flex-col lg:flex-row gap-6 items-end shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-            <div className="w-full lg:w-1/2">
+            <div className="w-full lg:w-1/3">
               <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
                 Seleccionar Sección Activa
               </label>
@@ -229,10 +275,45 @@ const page = () => {
                   type: 'select',
                   name: 'seccionActiva',
                   label: ' ',
-                  options: secciones.length > 0 ? secciones.map((seccion) => seccion.desNombre) : ['Cargando secciones...'],
+                  options: seccionesActivas.length > 0
+                    ? seccionesActivas.map((seccion) => ({
+                        label: `${seccion.nombreCurso} / ${seccion.nombreSeccion}`,
+                        value: String(seccion.idProfesorSeccion),
+                      }))
+                    : ['Cargando secciones...'],
                 }}
                 value={seccionActiva}
-                onChange={(_, v) => setSeccionActiva(v)}
+                onChange={(_, v) => {
+                  setSeccionActiva(v)
+                  if (v) {
+                    cargarAlumnosPorSeccion(Number(v))
+                  } else {
+                    setAlumnosSeccion([])
+                    setAlumnoSeleccionado('')
+                  }
+                }}
+              />
+            </div>
+            <div className="w-full lg:w-1/3">
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
+                Seleccionar Alumno
+              </label>
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'alumnoSeleccionado',
+                  label: ' ',
+                  options: alumnosSeccion.length > 0
+                    ? alumnosSeccion.map((alumno) => ({
+                        label: `${alumno.desApellidos}, ${alumno.desNombres}`,
+                        value: String(alumno.idUsuario),
+                      }))
+                    : loadingDetalleAlumno
+                      ? ['Cargando alumnos...']
+                      : ['Seleccione sección primero'],
+                }}
+                value={alumnoSeleccionado}
+                onChange={(_, v) => setAlumnoSeleccionado(v)}
               />
             </div>
 
@@ -265,12 +346,35 @@ const page = () => {
                 Filtrar
               </Boton>
             </div>
-            {errorProgreso && (
+            {(errorProgreso || errorDetalleAlumno) && (
               <p className="text-xs font-bold uppercase text-red-600 mt-2">
-                {errorProgreso}
+                {errorProgreso || errorDetalleAlumno}
               </p>
             )}
           </div>
+          {detalleAlumnoProgreso ? (
+            <div className="bg-white border-2 border-black p-6 mb-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
+              <h2 className="text-lg font-bold uppercase mb-4">Progreso Individual</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-gray-100 border-2 border-black p-4">
+                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Alumno</p>
+                  <p className="font-bold uppercase">{detalleAlumnoProgreso.alumno.apellidos}, {detalleAlumnoProgreso.alumno.nombres}</p>
+                </div>
+                <div className="bg-gray-100 border-2 border-black p-4">
+                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Curso</p>
+                  <p className="font-bold uppercase">{detalleAlumnoProgreso.nombreCurso}</p>
+                </div>
+                <div className="bg-gray-100 border-2 border-black p-4">
+                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Avance</p>
+                  <p className="font-bold uppercase">{detalleAlumnoProgreso.porcentajeAvance}%</p>
+                </div>
+                <div className="bg-gray-100 border-2 border-black p-4">
+                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Última Actividad</p>
+                  <p className="font-bold uppercase">{new Date(detalleAlumnoProgreso.ultimaActividad).toLocaleDateString('es-PE')}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <TarjetaEstadistica

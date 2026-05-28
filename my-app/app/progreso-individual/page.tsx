@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoSelect from '../componentes/CampoSelect'
 import Etiquetas from '../componentes/Etiquetas'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
+import { listarMisCursosSolicitud, CursoDetalleResponseData } from '../../lib/api/login/cursos'
 import { obtenerProgresoAlumnoCursoSolicitud, ProgresoAlumnoCursoResponseData } from '../../lib/api/login/progreso'
 
 const alumnosDisponibles = [
@@ -13,12 +14,8 @@ const alumnosDisponibles = [
   { idAlumno: 2, label: '[ APELLIDO, NOMBRE 2 ]' },
 ]
 
-const cursosDisponibles = [
-  { idCurso: 101, label: 'Java Básico' },
-  { idCurso: 102, label: 'Programación Avanzada' },
-]
-
 const page = () => {
+  const [cursosDisponibles, setCursosDisponibles] = useState<CursoDetalleResponseData[]>([])
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState('')
   const [cursoSeleccionado, setCursoSeleccionado] = useState('')
   const [detalleProgreso, setDetalleProgreso] = useState<ProgresoAlumnoCursoResponseData | null>(null)
@@ -29,6 +26,24 @@ const page = () => {
     if (typeof window === 'undefined') return ''
     return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
   }
+
+  useEffect(() => {
+    const cargarCursos = async () => {
+      try {
+        const response = await listarMisCursosSolicitud({ page: 0, size: 100 }, getToken())
+        const datos = response.datos
+        if (datos && Array.isArray(datos.content)) {
+          setCursosDisponibles(datos.content)
+        } else {
+          setCursosDisponibles([])
+        }
+      } catch {
+        setCursosDisponibles([])
+      }
+    }
+
+    cargarCursos()
+  }, [])
 
   const handleFiltrar = async () => {
     setErrorDetalle('')
@@ -94,10 +109,12 @@ const page = () => {
                   type: 'select',
                   name: 'curso',
                   label: ' ',
-                  options: cursosDisponibles.map((curso) => ({
-                    label: curso.label,
-                    value: String(curso.idCurso),
-                  })),
+                  options: cursosDisponibles.length > 0
+                    ? cursosDisponibles.map((curso) => ({
+                        label: curso.desNombre,
+                        value: String(curso.idCurso),
+                      }))
+                    : ['Cargando cursos...'],
                 }}
                 value={cursoSeleccionado}
                 onChange={(_, v) => setCursoSeleccionado(v)}

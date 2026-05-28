@@ -3,10 +3,22 @@
 import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoSelect from '../componentes/CampoSelect'
+import { CampoFormularioField } from '../componentes/CampoFormulario.types'
 import CampoTexto from '../componentes/CampoTexto'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import BarraLateral from '../componentes/BarraLateral'
-import { listarSeccionesSolicitud, SeccionDetalleResponseData } from '../../lib/api/login/secciones'
+import {
+  listarSeccionesProfesorSeccionSolicitud,
+  listarAlumnosSeccionSolicitud,
+  ProfesorSeccionResponseData,
+  AlumnoSeccionResponseData,
+} from '../../lib/api/login/secciones'
+import {
+  obtenerReporteGrupalExcel,
+  obtenerReporteGrupalPdf,
+  obtenerReporteIndividualExcel,
+  obtenerReporteIndividualPdf,
+} from '../../lib/api/login/reportes'
 
 const PAGE_SIZE = 10
 
@@ -43,14 +55,40 @@ const page = () => {
   const [filtroTipo, setFiltroTipo] = useState('')
   const [filtroUsuario, setFiltroUsuario] = useState('')
   const [filtroSeccion, setFiltroSeccion] = useState('')
+  const [filtroAlumno, setFiltroAlumno] = useState('')
   const [paginaActual, setPaginaActual] = useState(0)
-  const [secciones, setSecciones] = useState<SeccionDetalleResponseData[]>([])
+  const [secciones, setSecciones] = useState<ProfesorSeccionResponseData[]>([])
+  const [alumnos, setAlumnos] = useState<AlumnoSeccionResponseData[]>([])
   const [loadingSecciones, setLoadingSecciones] = useState(false)
+  const [loadingAlumnos, setLoadingAlumnos] = useState(false)
   const [seccionesError, setSeccionesError] = useState('')
+  const [alumnosError, setAlumnosError] = useState('')
 
   const tiposDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.tipoFiltro)))
   const usuariosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.usuario)))
   const seccionSeleccionada = secciones.find((sec) => String(sec.idSeccion) === filtroSeccion)
+
+  const seccionOptions = loadingSecciones
+    ? ['Cargando...']
+    : secciones.map((seccion) => ({
+        label: `${seccion.nombreSeccion} - ${seccion.valAnio}`,
+        value: String(seccion.idSeccion),
+      }))
+
+  const alumnoOptions = loadingAlumnos
+    ? ['Cargando...']
+    : alumnos.map((alumno) => ({
+        label: `${alumno.desApellidos}, ${alumno.desNombres}`,
+        value: String(alumno.idUsuario),
+      }))
+
+  const alumnoField: CampoFormularioField = {
+    type: 'select',
+    name: 'alumnoEspecifico',
+    label: 'Alumno Específico (Opcional)',
+    disabled: !filtroSeccion || loadingAlumnos,
+    options: alumnoOptions,
+  }
 
   const filasFiltradas = filasDatos.filter((fila) => {
     const term = busqueda.trim().toLowerCase()
@@ -64,7 +102,7 @@ const page = () => {
     const matchesUsuario = filtroUsuario === '' || fila.usuario === filtroUsuario
     const matchesSeccion =
       filtroSeccion === '' ||
-      (seccionSeleccionada ? fila.tipoFiltro.includes(seccionSeleccionada.desNombre) : true)
+      (seccionSeleccionada ? fila.tipoFiltro.includes(seccionSeleccionada.nombreSeccion) : true)
 
     return matchesTexto && matchesTipo && matchesUsuario && matchesSeccion
   })
@@ -109,11 +147,8 @@ const page = () => {
     setSeccionesError('')
 
     try {
-      const response = await listarSeccionesSolicitud(
-        { page: 0, size: 100 },
-        getToken(),
-      )
-      setSecciones(response.datos?.content ?? [])
+      const response = await listarSeccionesProfesorSeccionSolicitud({}, getToken())
+      setSecciones(response.datos ?? [])
     } catch (error) {
       setSeccionesError(
         error instanceof Error
@@ -123,6 +158,87 @@ const page = () => {
       setSecciones([])
     } finally {
       setLoadingSecciones(false)
+    }
+  }
+
+  const cargarAlumnos = async (idSeccion: number) => {
+    setLoadingAlumnos(true)
+    setAlumnosError('')
+
+    try {
+      const response = await listarAlumnosSeccionSolicitud(idSeccion, getToken())
+      setAlumnos(response.datos ?? [])
+    } catch (error) {
+      setAlumnosError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar los alumnos de la sección.',
+      )
+      setAlumnos([])
+    } finally {
+      setLoadingAlumnos(false)
+    }
+  }
+
+  useEffect(() => {
+    if (filtroSeccion) {
+      setFiltroAlumno('')
+      cargarAlumnos(Number(filtroSeccion))
+    } else {
+      setAlumnos([])
+      setFiltroAlumno('')
+      setAlumnosError('')
+    }
+  }, [filtroSeccion])
+
+  const descargarBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadReporte = async (formato: 'pdf' | 'excel') => {
+    if (!filtroSeccion) {
+      alert('Seleccione primero una sección.')
+      return
+    }
+
+    try {
+      const idSeccion = Number(filtroSeccion)
+      const filenameBase = filtroAlumno
+        ? `reporte-individual-alumno-${filtroAlumno}-curso-${seccionSeleccionada?.idCurso ?? '0'}`
+        : `reporte-grupal-seccion-${idSeccion}`
+      const extension = formato === 'pdf' ? 'pdf' : 'xlsx'
+      let blob: Blob
+
+      if (filtroAlumno) {
+        const idAlumno = Number(filtroAlumno)
+        if (formato === 'pdf') {
+          blob = await obtenerReporteIndividualPdf(idAlumno, seccionSeleccionada?.idCurso ?? 0, getToken())
+        } else {
+          blob = await obtenerReporteIndividualExcel(idAlumno, seccionSeleccionada?.idCurso ?? 0, getToken())
+        }
+      } else {
+        if (formato === 'pdf') {
+          blob = await obtenerReporteGrupalPdf(idSeccion, getToken())
+        } else {
+          blob = await obtenerReporteGrupalExcel(idSeccion, getToken())
+        }
+      }
+
+      descargarBlob(blob, `${filenameBase}.${extension}`)
+    } catch (error) {
+      console.error('Error al descargar el reporte:', error)
+      alert(
+        `No se pudo descargar el reporte.${
+          error instanceof Error ? ` ${error.message}` : ''
+        }`,
+      )
     }
   }
 
@@ -162,20 +278,18 @@ const page = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
+                <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
+                  Sección
+                </label>
                 <CampoSelect
                   field={{
                     type: 'select',
                     name: 'seccionGrupo',
                     label: 'Sección / Grupo',
-                    options: loadingSecciones
-                      ? ['Cargando...']
-                      : secciones.map((seccion) => ({
-                        label: `${seccion.desNombre} - ${seccion.valAnio}`,
-                        value: String(seccion.idSeccion),
-                      })),
+                    options: seccionOptions,
                   }}
                   value={filtroSeccion}
-                  onChange={(_, value) => setFiltroSeccion(value)}
+                  onChange={(_: string, value: string) => setFiltroSeccion(value)}
                 />
                 {seccionesError && (
                   <p className="text-xs text-red-600 font-bold uppercase mt-2">
@@ -188,60 +302,20 @@ const page = () => {
                 <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
                   Alumno Específico (Opcional)
                 </label>
-                <select className="w-full border-2 border-black p-3 font-bold uppercase bg-gray-100 focus:bg-white focus:outline-none text-black">
-                  <option>[ Todos los Alumnos ]</option>
-                  <option>Apellido, Nombre 1</option>
-                  <option>Apellido, Nombre 2</option>
-                </select>
+                <CampoSelect
+                  field={alumnoField}
+                  value={filtroAlumno}
+                  onChange={(_: string, value: string) => setFiltroAlumno(value)}
+                />
+                {alumnosError && (
+                  <p className="text-xs text-red-600 font-bold uppercase mt-2">
+                    {alumnosError}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
-                  Fecha de Inicio
-                </label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/AAAA"
-                  defaultValue="01/01/2026"
-                  className="w-full border-2 border-black p-3 font-bold uppercase text-black focus:outline-none bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
-                  Fecha de Fin
-                </label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/AAAA"
-                  defaultValue="13/04/2026"
-                  className="w-full border-2 border-black p-3 font-bold uppercase text-black focus:outline-none bg-white"
-                />
-              </div>
             </div>
 
-            {/* <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-300 space-y-3 text-black">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  defaultChecked
-                  className="w-5 h-5 accent-black border-2 border-black"
-                />
-                <span className="text-sm font-bold uppercase text-black">
-                  Incluir gráficas de rendimiento
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  className="w-5 h-5 accent-black border-2 border-black"
-                />
-                <span className="text-sm font-bold uppercase text-black">
-                  Incluir historial de intentos de examen
-                </span>
-              </div>
-            </div> */}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
@@ -255,7 +329,13 @@ const page = () => {
                 Ideal para informes impresos y evidencias oficiales.
               </p>
 
-              <Boton variant="wire" size="md" fullWidth>
+              <Boton
+                variant="wire"
+                size="md"
+                fullWidth
+                onClick={() => handleDownloadReporte('pdf')}
+                disabled={!filtroSeccion}
+              >
                 Descargar .PDF
               </Boton>
             </div>
@@ -270,126 +350,18 @@ const page = () => {
                 Ideal para análisis estadístico y manipulación de datos.
               </p>
 
-              <Boton variant="wire" size="md" fullWidth>
+              <Boton
+                variant="wire"
+                size="md"
+                fullWidth
+                onClick={() => handleDownloadReporte('excel')}
+                disabled={!filtroSeccion}
+              >
                 Descargar .XLSX
               </Boton>
             </div>
           </div>
 
-          <h2 className="text-xl font-bold uppercase mb-4 bg-black text-white inline-block px-3 py-1">
-            Reportes Generados Recientemente
-          </h2>
-
-          <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
-            <div className="flex-1">
-              <CampoTexto
-                field={{
-                  type: 'search',
-                  name: 'buscarReporte',
-                  label: 'Buscar reporte',
-                  placeholder: 'BUSCAR POR FECHA, TIPO O USUARIO...',
-                  icon: 'fa-solid fa-search',
-                }}
-                value={busqueda}
-                onChange={(_, v) => setBusqueda(v)}
-              />
-            </div>
-
-            <div className="w-full lg:w-48">
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'tipoFiltro',
-                  label: 'Tipo / Filtro',
-                  options: tiposDisponibles,
-                }}
-                value={filtroTipo}
-                onChange={(_, v) => setFiltroTipo(v)}
-              />
-            </div>
-
-            <div className="w-full lg:w-48">
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'usuario',
-                  label: 'Usuario',
-                  options: usuariosDisponibles,
-                }}
-                value={filtroUsuario}
-                onChange={(_, v) => setFiltroUsuario(v)}
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Boton
-                variant="primary"
-                size="md"
-                icon={<i className="fa-solid fa-magnifying-glass text-xs"></i>}
-                onClick={handleBuscar}
-              >
-                Buscar
-              </Boton>
-            </div>
-          </div>
-
-          <div className="bg-white border-2 border-black overflow-x-auto mb-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
-            <Tabla
-              columns={columnas}
-              rows={filasPaginadas}
-              renderAction={() => (
-                <Boton variant="ghost" size="sm">
-                  Re-descargar
-                </Boton>
-              )}
-              className="max-w-none mx-0 space-y-0"
-            />
-
-            <div className="p-4 border-t-2 border-black flex items-center justify-between bg-white">
-              <span className="text-xs font-bold uppercase text-gray-500">
-                {totalElementos > 0
-                  ? `Mostrando ${inicio} a ${fin} de ${totalElementos} reportes`
-                  : 'Sin resultados'}
-              </span>
-
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => handlePageClick(paginaActual - 1)}
-                  disabled={paginaActual === 0}
-                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Anterior
-                </button>
-
-                {paginasVisibles.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => handlePageClick(p)}
-                    className={`border-2 px-3 py-1 font-bold text-sm ${p === paginaActual ? 'bg-black text-white border-black cursor-default' : 'border-black hover:bg-gray-200'}`}
-                  >
-                    {p + 1}
-                  </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => handlePageClick(paginaActual + 1)}
-                  disabled={paginaActual >= totalPaginas - 1}
-                  className="border-2 border-black px-3 py-1 font-bold uppercase text-sm hover:bg-gray-200 disabled:border-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-2 border-dashed border-gray-400 p-4 bg-gray-50 text-xs font-bold text-gray-600 uppercase leading-relaxed">
-            Nota: la generación de archivos puede apoyarse en librerías especializadas para PDF y
-            Excel. Si el volumen de datos es alto, se recomienda procesar estas solicitudes de
-            forma asíncrona.
-          </div>
         </div>
       </main>
     </>
