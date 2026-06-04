@@ -8,17 +8,26 @@ import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
 import {
-  SeccionDetalleResponseData,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts'
+import {
   listarSeccionesProfesorSeccionSolicitud,
-  listarAlumnosSeccionSolicitud,
   ProfesorSeccionResponseData,
-  AlumnoSeccionResponseData,
 } from '../../lib/api/login/secciones'
 import {
   obtenerProgresoSeccionSolicitud,
-  obtenerProgresoAlumnoCursoSolicitud,
+  obtenerProgresoNoAvanzanSolicitud,
   ProgresoSeccionResponseData,
-  ProgresoAlumnoCursoResponseData,
   AlumnoProgresoData,
 } from '../../lib/api/login/progreso'
 
@@ -69,15 +78,13 @@ const page = () => {
   const [paginaActual, setPaginaActual] = useState(0)
   const [seccionesActivas, setSeccionesActivas] = useState<ProfesorSeccionResponseData[]>([])
   const [seccionActiva, setSeccionActiva] = useState('')
-  const [alumnosSeccion, setAlumnosSeccion] = useState<AlumnoSeccionResponseData[]>([])
-  const [alumnoSeleccionado, setAlumnoSeleccionado] = useState('')
-  const [detalleAlumnoProgreso, setDetalleAlumnoProgreso] = useState<ProgresoAlumnoCursoResponseData | null>(null)
-  const [loadingDetalleAlumno, setLoadingDetalleAlumno] = useState(false)
-  const [errorDetalleAlumno, setErrorDetalleAlumno] = useState('')
   const [progreso, setProgreso] = useState<ProgresoSeccionResponseData | null>(null)
   const [alumnos, setAlumnos] = useState<AlumnoProgresoData[]>([])
+  const [atencionPrioritaria, setAtencionPrioritaria] = useState<AlumnoProgresoData[]>([])
   const [loadingProgreso, setLoadingProgreso] = useState(false)
+  const [loadingAtencion, setLoadingAtencion] = useState(false)
   const [errorProgreso, setErrorProgreso] = useState('')
+  const [errorAtencion, setErrorAtencion] = useState('')
   const [fechaInicio, setFechaInicio] = useState('2026-03-01')
   const [fechaFin, setFechaFin] = useState(() => {
     const hoy = new Date()
@@ -89,10 +96,30 @@ const page = () => {
     return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
   }
 
+  const getProfesorId = (): number | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = sessionStorage.getItem('usuario') ?? localStorage.getItem('usuario') ?? ''
+      const usuario = JSON.parse(raw) as { id?: number }
+      return usuario.id ?? null
+    } catch {
+      return null
+    }
+  }
+
   useEffect(() => {
     const cargarSeccionesActivas = async () => {
+      const idProfesor = getProfesorId()
+      if (idProfesor === null) {
+        setSeccionesActivas([])
+        return
+      }
+
       try {
-        const response = await listarSeccionesProfesorSeccionSolicitud({}, getToken())
+        const response = await listarSeccionesProfesorSeccionSolicitud(
+          { idProfesor },
+          getToken(),
+        )
         const datos = response.datos
         if (datos && Array.isArray(datos)) {
           setSeccionesActivas(datos)
@@ -105,20 +132,78 @@ const page = () => {
     cargarSeccionesActivas()
   }, [])
 
-  const modulosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.moduloActual)))
-  const estadosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.estado)))
+  const cargarAtencionPrioritaria = async (idSeccion: number) => {
+    setErrorAtencion('')
+    setLoadingAtencion(true)
+
+    try {
+      const response = await obtenerProgresoNoAvanzanSolicitud(
+        idSeccion,
+        { dias: 7, minAvance: 50 },
+        getToken(),
+      )
+      const datos = response.datos
+      if (Array.isArray(datos)) {
+        setAtencionPrioritaria(datos)
+      } else {
+        setAtencionPrioritaria([])
+      }
+    } catch (error) {
+      setErrorAtencion(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar la atención prioritaria.',
+      )
+      setAtencionPrioritaria([])
+    } finally {
+      setLoadingAtencion(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!seccionActiva) {
+      setAtencionPrioritaria([])
+      return
+    }
+
+    const idSeccion = Number(seccionActiva)
+    if (Number.isNaN(idSeccion)) {
+      setAtencionPrioritaria([])
+      return
+    }
+
+    cargarAtencionPrioritaria(idSeccion)
+  }, [seccionActiva])
+
+  const modulosDisponibles = atencionPrioritaria.length > 0
+    ? Array.from(new Set(atencionPrioritaria.map((fila) => `${fila.leccionesCompletadas}/${fila.totalLeccionesObligatorias}`)))
+    : Array.from(new Set(filasDatos.map((fila) => fila.moduloActual)))
+  const estadosDisponibles = atencionPrioritaria.length > 0
+    ? Array.from(new Set(atencionPrioritaria.map((fila) => (fila.porcentaje < 50 ? 'Rezagado' : 'Al Día'))))
+    : Array.from(new Set(filasDatos.map((fila) => fila.estado)))
   const promedioPorcentaje = alumnos.length
     ? Number((alumnos.reduce((sum, alumno) => sum + alumno.porcentaje, 0) / alumnos.length).toFixed(1))
     : 0
-  const totalRezagados = alumnos.filter((alumno) => alumno.porcentaje < 50).length
+  const totalRezagados = atencionPrioritaria.length
+  const totalAlDia = alumnos.length - totalRezagados
+  const barraData = alumnos.map((alumno) => ({
+    nombre: `${alumno.apellidos} ${alumno.nombres}`,
+    porcentaje: alumno.porcentaje,
+  }))
+  const estadoData = [
+    { name: 'Al Día', value: totalAlDia },
+    { name: 'Rezagados', value: totalRezagados },
+  ]
+  const PIE_COLORS = ['#000000', '#9CA3AF']
 
-  const filasFiltradas = alumnos.filter((fila) => {
+  const filasFiltradas = atencionPrioritaria.filter((fila) => {
     const term = busqueda.trim().toLowerCase()
-    const nombreCompleto = `${fila.apellidos} ${fila.nombres}`
+    const nombreCompleto = `${fila.apellidos ?? ''} ${fila.nombres ?? ''}`
+    const ultimaActividad = fila.ultimaActividad ?? ''
     const matchesTexto =
       term === '' ||
       nombreCompleto.toLowerCase().includes(term) ||
-      fila.ultimaActividad.toLowerCase().includes(term)
+      ultimaActividad.toLowerCase().includes(term)
 
     const matchesModulo = filtroModulo === '' || `${fila.leccionesCompletadas}/${fila.totalLeccionesObligatorias}` === filtroModulo
     const matchesEstado = filtroEstado === '' || (fila.porcentaje < 50 ? 'Rezagado' : 'Al Día') === filtroEstado
@@ -126,10 +211,10 @@ const page = () => {
     return matchesTexto && matchesModulo && matchesEstado
   })
 
-  const totalElementos = filasFiltradas.length
-  const totalPaginas = Math.max(1, Math.ceil(totalElementos / PAGE_SIZE))
-  const inicio = totalElementos === 0 ? 0 : paginaActual * PAGE_SIZE + 1
-  const fin = Math.min((paginaActual + 1) * PAGE_SIZE, totalElementos)
+  const totalElementos = progreso ? progreso.alumnos.totalElements : filasFiltradas.length
+  const totalPaginas = progreso ? progreso.alumnos.totalPages : Math.max(1, Math.ceil(totalElementos / PAGE_SIZE))
+  const inicio = filasFiltradas.length === 0 ? 0 : paginaActual * PAGE_SIZE + 1
+  const fin = Math.min((paginaActual + 1) * PAGE_SIZE, filasFiltradas.length)
 
   const filasPaginadas = filasFiltradas.slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE).map((fila) => ({
     id: fila.idAlumno,
@@ -169,45 +254,42 @@ const page = () => {
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   })()
 
-  const cargarAlumnosPorSeccion = async (idSeccion: number) => {
-    setErrorDetalleAlumno('')
-    setLoadingDetalleAlumno(true)
-    setAlumnosSeccion([])
-    setAlumnoSeleccionado('')
-    setDetalleAlumnoProgreso(null)
+  const cargarProgresoSeccion = async (idSeccion: number, page: number) => {
+    setErrorProgreso('')
+    setLoadingProgreso(true)
 
     try {
-      const response = await listarAlumnosSeccionSolicitud(idSeccion, getToken())
+      const response = await obtenerProgresoSeccionSolicitud(
+        idSeccion,
+        { page, size: PAGE_SIZE },
+        getToken(),
+      )
+
       const datos = response.datos
-      if (Array.isArray(datos)) {
-        setAlumnosSeccion(datos)
+      if (datos) {
+        setProgreso(datos)
+        setAlumnos(datos.alumnos.content ?? [])
+        setPaginaActual(page)
       } else {
-        setAlumnosSeccion([])
+        setProgreso(null)
+        setAlumnos([])
       }
     } catch (error) {
-      setErrorDetalleAlumno(
+      setErrorProgreso(
         error instanceof Error
           ? error.message
-          : 'No se pudo cargar los alumnos de la sección.',
+          : 'No se pudo cargar el progreso de sección.',
       )
-      setAlumnosSeccion([])
+      setProgreso(null)
+      setAlumnos([])
     } finally {
-      setLoadingDetalleAlumno(false)
+      setLoadingProgreso(false)
     }
   }
 
   const handleBuscar = async () => {
-    setPaginaActual(0)
-    setErrorProgreso('')
-    setErrorDetalleAlumno('')
-
     if (!seccionActiva) {
       setErrorProgreso('Seleccione una sección activa.')
-      return
-    }
-
-    if (!alumnoSeleccionado) {
-      setErrorProgreso('Seleccione un alumno antes de filtrar.')
       return
     }
 
@@ -220,29 +302,15 @@ const page = () => {
       return
     }
 
-    setLoadingProgreso(true)
-    try {
-      const response = await obtenerProgresoAlumnoCursoSolicitud(
-        Number(alumnoSeleccionado),
-        seccion.idCurso,
-        getToken(),
-      )
-      setDetalleAlumnoProgreso(response.datos ?? null)
-    } catch (error) {
-      setErrorProgreso(
-        error instanceof Error
-          ? error.message
-          : 'No se pudo cargar el progreso del alumno.',
-      )
-      setDetalleAlumnoProgreso(null)
-    } finally {
-      setLoadingProgreso(false)
-    }
+    await Promise.all([
+      cargarProgresoSeccion(Number(seccionActiva), 0),
+      cargarAtencionPrioritaria(Number(seccionActiva)),
+    ])
   }
 
-  const handlePageClick = (pageNumber: number) => {
-    if (pageNumber !== paginaActual) {
-      setPaginaActual(pageNumber)
+  const handlePageClick = async (pageNumber: number) => {
+    if (pageNumber !== paginaActual && seccionActiva) {
+      await cargarProgresoSeccion(Number(seccionActiva), pageNumber)
     }
   }
   return (
@@ -277,104 +345,32 @@ const page = () => {
                   label: ' ',
                   options: seccionesActivas.length > 0
                     ? seccionesActivas.map((seccion) => ({
-                        label: `${seccion.nombreCurso} / ${seccion.nombreSeccion}`,
-                        value: String(seccion.idProfesorSeccion),
-                      }))
+                      label: `${seccion.nombreCurso} / ${seccion.nombreSeccion}`,
+                      value: String(seccion.idProfesorSeccion),
+                    }))
                     : ['Cargando secciones...'],
                 }}
                 value={seccionActiva}
                 onChange={(_, v) => {
                   setSeccionActiva(v)
-                  if (v) {
-                    cargarAlumnosPorSeccion(Number(v))
-                  } else {
-                    setAlumnosSeccion([])
-                    setAlumnoSeleccionado('')
-                  }
                 }}
-              />
-            </div>
-            <div className="w-full lg:w-1/3">
-              <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
-                Seleccionar Alumno
-              </label>
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'alumnoSeleccionado',
-                  label: ' ',
-                  options: alumnosSeccion.length > 0
-                    ? alumnosSeccion.map((alumno) => ({
-                        label: `${alumno.desApellidos}, ${alumno.desNombres}`,
-                        value: String(alumno.idUsuario),
-                      }))
-                    : loadingDetalleAlumno
-                      ? ['Cargando alumnos...']
-                      : ['Seleccione sección primero'],
-                }}
-                value={alumnoSeleccionado}
-                onChange={(_, v) => setAlumnoSeleccionado(v)}
               />
             </div>
 
-            {/* <div className="w-full lg:w-1/4">
-              <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
-                Fecha Inicio
-              </label>
-              <input
-                type="date"
-                value={fechaInicio}
-                onChange={(event) => setFechaInicio(event.target.value)}
-                className="w-full border-2 border-black p-3 font-bold uppercase bg-white text-black outline-none"
-              />
-            </div> */}
 
             <div className="w-full lg:w-1/4 flex gap-4 items-end">
-              {/* <div className="flex-1">
-                <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
-                  Fecha Fin
-                </label>
-                <input
-                  type="date"
-                  value={fechaFin}
-                  onChange={(event) => setFechaFin(event.target.value)}
-                  className="w-full border-2 border-black p-3 font-bold uppercase bg-white text-black outline-none"
-                />
-              </div> */}
+
 
               <Boton variant="primary" size="md" onClick={handleBuscar}>
                 Filtrar
               </Boton>
             </div>
-            {(errorProgreso || errorDetalleAlumno) && (
+            {errorProgreso && (
               <p className="text-xs font-bold uppercase text-red-600 mt-2">
-                {errorProgreso || errorDetalleAlumno}
+                {errorProgreso}
               </p>
             )}
           </div>
-          {detalleAlumnoProgreso ? (
-            <div className="bg-white border-2 border-black p-6 mb-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
-              <h2 className="text-lg font-bold uppercase mb-4">Progreso Individual</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-gray-100 border-2 border-black p-4">
-                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Alumno</p>
-                  <p className="font-bold uppercase">{detalleAlumnoProgreso.alumno.apellidos}, {detalleAlumnoProgreso.alumno.nombres}</p>
-                </div>
-                <div className="bg-gray-100 border-2 border-black p-4">
-                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Curso</p>
-                  <p className="font-bold uppercase">{detalleAlumnoProgreso.nombreCurso}</p>
-                </div>
-                <div className="bg-gray-100 border-2 border-black p-4">
-                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Avance</p>
-                  <p className="font-bold uppercase">{detalleAlumnoProgreso.porcentajeAvance}%</p>
-                </div>
-                <div className="bg-gray-100 border-2 border-black p-4">
-                  <p className="text-xs font-bold uppercase text-gray-700 mb-2">Última Actividad</p>
-                  <p className="font-bold uppercase">{new Date(detalleAlumnoProgreso.ultimaActividad).toLocaleDateString('es-PE')}</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <TarjetaEstadistica
@@ -400,44 +396,16 @@ const page = () => {
                 Avance Promedio por Módulo
               </h3>
 
-              <div className="h-56 border-b-2 border-l-2 border-black flex items-end justify-between p-2 pt-8 gap-3">
-                {alumnos.slice(0, 4).map((alumno) => (
-                  <div key={alumno.idAlumno} className="w-full flex flex-col items-center group">
-                    <span className="text-xs font-bold mb-1 text-black">{alumno.porcentaje}%</span>
-                    <div
-                      className={`w-full border-2 border-black ${alumno.porcentaje >= 70 ? 'bg-black' : 'bg-gray-400'} group-hover:bg-gray-800 transition-colors`}
-                      style={{ height: `${alumno.porcentaje}%` }}
-                    />
-                    <span className="text-xs font-bold mt-2 text-black">{alumno.apellidos} {alumno.nombres}</span>
-                  </div>
-                ))}
-                {alumnos.length === 0 && (
-                  <>
-                    <div className="w-full flex flex-col items-center group">
-                      <span className="text-xs font-bold mb-1 text-black">95%</span>
-                      <div className="w-full bg-black h-[95%] border-2 border-black group-hover:bg-gray-800 transition-colors"></div>
-                      <span className="text-xs font-bold mt-2 text-black">MOD 1</span>
-                    </div>
-
-                    <div className="w-full flex flex-col items-center group">
-                      <span className="text-xs font-bold mb-1 text-black">70%</span>
-                      <div className="w-full bg-black h-[70%] border-2 border-black group-hover:bg-gray-800 transition-colors"></div>
-                      <span className="text-xs font-bold mt-2 text-black">MOD 2</span>
-                    </div>
-
-                    <div className="w-full flex flex-col items-center group">
-                      <span className="text-xs font-bold mb-1 text-black">45%</span>
-                      <div className="w-full bg-gray-400 h-[45%] border-2 border-black border-dashed group-hover:bg-gray-500 transition-colors"></div>
-                      <span className="text-xs font-bold mt-2 text-black">MOD 3</span>
-                    </div>
-
-                    <div className="w-full flex flex-col items-center group">
-                      <span className="text-xs font-bold mb-1 text-black">10%</span>
-                      <div className="w-full bg-gray-200 h-[10%] border-2 border-black border-dashed group-hover:bg-gray-300 transition-colors"></div>
-                      <span className="text-xs font-bold mt-2 text-black">MOD 4</span>
-                    </div>
-                  </>
-                )}
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barraData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="nombre" tick={{ fontSize: 12 }} interval={0} angle={-25} textAnchor="end" height={60} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="porcentaje" fill="#000000" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
@@ -447,22 +415,42 @@ const page = () => {
               </h3>
 
               <div className="flex-1 flex items-center justify-center gap-8 flex-col sm:flex-row">
-                <div className="w-40 h-40 rounded-full border-4 border-black bg-[conic-gradient(black_0_75%,#d1d5db_75%_100%)] shadow-[4px_4px_0_0_rgba(0,0,0,0.2)]"></div>
+                <div className="w-full h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={estadoData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent = 0 }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {estadoData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      {/* <Legend verticalAlign="bottom" height={36} /> */}
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
 
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-4 h-4 bg-black border-2 border-black"></div>
                     <div>
                       <p className="font-bold uppercase text-sm text-black">Al Día</p>
-                      <p className="text-xs text-gray-700 font-bold">24 Alumnos (75%)</p>
+                      <p className="text-xs text-gray-700 font-bold">{totalAlDia} Alumnos</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="w-4 h-4 bg-gray-300 border-2 border-black border-dashed"></div>
+                    <div className="w-4 h-4 bg-[#9CA3AF] border-2 border-black border-dashed"></div>
                     <div>
                       <p className="font-bold uppercase text-sm text-black">Rezagados</p>
-                      <p className="text-xs text-gray-700 font-bold">8 Alumnos (25%)</p>
+                      <p className="text-xs text-gray-700 font-bold">{totalRezagados} Alumnos</p>
                     </div>
                   </div>
                 </div>
@@ -475,9 +463,6 @@ const page = () => {
               Atención Prioritaria (Rezagados)
             </h2>
 
-            <button className="text-xs font-bold uppercase border-b-2 border-black hover:text-gray-600 transition-colors text-black">
-              Ver todos los alumnos <i className="fa-solid fa-arrow-right ml-1"></i>
-            </button>
           </div>
 
           <div className="bg-white border-2 border-black p-4 mb-8 flex flex-col lg:flex-row gap-4 shadow-[8px_8px_0_0_rgba(0,0,0,1)] text-gray-900">
@@ -492,32 +477,6 @@ const page = () => {
                 }}
                 value={busqueda}
                 onChange={(_, v) => setBusqueda(v)}
-              />
-            </div>
-
-            <div className="w-full lg:w-48">
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'modulo',
-                  label: 'Módulo',
-                  options: modulosDisponibles,
-                }}
-                value={filtroModulo}
-                onChange={(_, v) => setFiltroModulo(v)}
-              />
-            </div>
-
-            <div className="w-full lg:w-48">
-              <CampoSelect
-                field={{
-                  type: 'select',
-                  name: 'estado',
-                  label: 'Estado',
-                  options: estadosDisponibles,
-                }}
-                value={filtroEstado}
-                onChange={(_, v) => setFiltroEstado(v)}
               />
             </div>
 

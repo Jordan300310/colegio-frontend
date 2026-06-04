@@ -6,15 +6,19 @@ import CampoSelect from '../componentes/CampoSelect'
 import Etiquetas from '../componentes/Etiquetas'
 import TarjetaEstadistica from '../componentes/TarjetaEstadistica'
 import BarraLateral from '../componentes/BarraLateral'
-import { listarMisCursosSolicitud, CursoDetalleResponseData } from '../../lib/api/login/cursos'
+import { listarCursosAlumnoSolicitud, CursoDetalleResponseData } from '../../lib/api/login/cursos'
 import { obtenerProgresoAlumnoCursoSolicitud, ProgresoAlumnoCursoResponseData } from '../../lib/api/login/progreso'
-
-const alumnosDisponibles = [
-  { idAlumno: 1, label: '[ APELLIDO, NOMBRE 1 ]' },
-  { idAlumno: 2, label: '[ APELLIDO, NOMBRE 2 ]' },
-]
+import {
+  listarSeccionesProfesorSeccionSolicitud,
+  listarAlumnosSeccionProfesorSolicitud,
+  ProfesorSeccionResponseData,
+  AlumnoSeccionResponseData,
+} from '../../lib/api/login/secciones'
 
 const page = () => {
+  const [seccionesDisponibles, setSeccionesDisponibles] = useState<ProfesorSeccionResponseData[]>([])
+  const [seccionSeleccionada, setSeccionSeleccionada] = useState('')
+  const [alumnosDisponibles, setAlumnosDisponibles] = useState<AlumnoSeccionResponseData[]>([])
   const [cursosDisponibles, setCursosDisponibles] = useState<CursoDetalleResponseData[]>([])
   const [alumnoSeleccionado, setAlumnoSeleccionado] = useState('')
   const [cursoSeleccionado, setCursoSeleccionado] = useState('')
@@ -27,10 +31,86 @@ const page = () => {
     return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
   }
 
+  const getProfesorId = (): number | null => {
+    if (typeof window === 'undefined') return null
+    const rawUsuario = sessionStorage.getItem('usuario') ?? localStorage.getItem('usuario')
+    if (!rawUsuario) return null
+
+    try {
+      const usuario = JSON.parse(rawUsuario) as { id?: number; idUsuario?: number }
+      return usuario?.id ?? usuario?.idUsuario ?? null
+    } catch {
+      return null
+    }
+  }
+
+  const cargarSecciones = async () => {
+    const profesorId = getProfesorId()
+    if (!profesorId) {
+      setSeccionesDisponibles([])
+      return
+    }
+
+    try {
+      const response = await listarSeccionesProfesorSeccionSolicitud({ idProfesor: profesorId }, getToken())
+      setSeccionesDisponibles(response.datos ?? [])
+    } catch {
+      setSeccionesDisponibles([])
+    }
+  }
+
+  const cargarAlumnos = async (idSeccion: number) => {
+    const profesorId = getProfesorId()
+    if (!profesorId) {
+      setAlumnosDisponibles([])
+      return
+    }
+
+    try {
+      const response = await listarAlumnosSeccionProfesorSolicitud(
+        idSeccion,
+        profesorId,
+        getToken(),
+      )
+      setAlumnosDisponibles(response.datos ?? [])
+    } catch {
+      setAlumnosDisponibles([])
+    }
+  }
+
   useEffect(() => {
-    const cargarCursos = async () => {
+    cargarSecciones()
+  }, [])
+
+  useEffect(() => {
+    if (!seccionSeleccionada) {
+      setAlumnosDisponibles([])
+      setAlumnoSeleccionado('')
+      setCursosDisponibles([])
+      setCursoSeleccionado('')
+      return
+    }
+
+    cargarAlumnos(Number(seccionSeleccionada))
+    setAlumnoSeleccionado('')
+    setCursoSeleccionado('')
+  }, [seccionSeleccionada])
+
+  useEffect(() => {
+    const cargarCursosAlumno = async () => {
+      if (!alumnoSeleccionado) {
+        setCursosDisponibles([])
+        setCursoSeleccionado('')
+        return
+      }
+
       try {
-        const response = await listarMisCursosSolicitud({ page: 0, size: 100 }, getToken())
+        const response = await listarCursosAlumnoSolicitud(
+          Number(alumnoSeleccionado),
+          { page: 0, size: 100 },
+          getToken(),
+        )
+
         const datos = response.datos
         if (datos && Array.isArray(datos.content)) {
           setCursosDisponibles(datos.content)
@@ -42,8 +122,8 @@ const page = () => {
       }
     }
 
-    cargarCursos()
-  }, [])
+    cargarCursosAlumno()
+  }, [alumnoSeleccionado])
 
   const handleFiltrar = async () => {
     setErrorDetalle('')
@@ -73,6 +153,24 @@ const page = () => {
   }
 
   const progresoAlumno = detalleProgreso
+  const seccionSeleccionadaDetalle = seccionesDisponibles.find(
+    (sec) => String(sec.idSeccion) === seccionSeleccionada,
+  )
+  const seccionNombre = seccionSeleccionadaDetalle?.nombreSeccion ?? 'No seleccionada'
+  const alumnoNombre = progresoAlumno
+    ? `${progresoAlumno.alumno.apellidos}, ${progresoAlumno.alumno.nombres}`
+    : '[ APELLIDO, NOMBRE DEL ALUMNO ]'
+  const alumnoEmail = progresoAlumno?.alumno.correo ?? ''
+  const actividadUltima = progresoAlumno
+    ? new Date(progresoAlumno.ultimaActividad).toLocaleDateString('es-PE')
+    : '12 ABR 2026'
+  const leccionesDisponibles = progresoAlumno?.modulos.flatMap((modulo) =>
+    modulo.lecciones.map((leccion) => ({
+      ...leccion,
+      moduloNombre: modulo.nombre,
+    })),
+  ) ?? []
+  const evaluaciones = progresoAlumno?.evaluaciones ?? []
 
   return (
     <>
@@ -81,7 +179,28 @@ const page = () => {
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
         <div className="p-8 max-w-6xl mx-auto w-full pb-20">
           <div className="bg-white border-2 border-black p-6 mb-8 flex flex-col lg:flex-row gap-6 items-end shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-            <div className="w-full lg:w-1/3">
+            <div className="w-full lg:w-1/4">
+              <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
+                Seleccionar Sección
+              </label>
+              <CampoSelect
+                field={{
+                  type: 'select',
+                  name: 'seccion',
+                  label: ' ',
+                  options: seccionesDisponibles.length > 0
+                    ? seccionesDisponibles.map((seccion) => ({
+                        label: `${seccion.nombreSeccion} — ${seccion.nombreCurso}`,
+                        value: String(seccion.idSeccion),
+                      }))
+                    : ['Cargando secciones...'],
+                }}
+                value={seccionSeleccionada}
+                onChange={(_, v) => setSeccionSeleccionada(v)}
+              />
+            </div>
+
+            <div className="w-full lg:w-1/4">
               <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
                 Seleccionar Alumno
               </label>
@@ -90,17 +209,25 @@ const page = () => {
                   type: 'select',
                   name: 'alumno',
                   label: ' ',
-                  options: alumnosDisponibles.map((alumno) => ({
-                    label: alumno.label,
-                    value: String(alumno.idAlumno),
-                  })),
+                  disabled: !seccionSeleccionada,
+                  options: seccionSeleccionada
+                    ? alumnosDisponibles.length > 0
+                      ? alumnosDisponibles.map((alumno) => ({
+                          label: `${alumno.desApellidos}, ${alumno.desNombres}`,
+                          value: String(alumno.idUsuario),
+                        }))
+                      : ['No hay alumnos en esta sección']
+                    : ['Seleccione una sección primero'],
                 }}
                 value={alumnoSeleccionado}
-                onChange={(_, v) => setAlumnoSeleccionado(v)}
+                onChange={(_, v) => {
+                  setAlumnoSeleccionado(v)
+                  setCursoSeleccionado('')
+                }}
               />
             </div>
 
-            <div className="w-full lg:w-1/3">
+            <div className="w-full lg:w-1/4">
               <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2">
                 Seleccionar Curso
               </label>
@@ -109,12 +236,15 @@ const page = () => {
                   type: 'select',
                   name: 'curso',
                   label: ' ',
-                  options: cursosDisponibles.length > 0
-                    ? cursosDisponibles.map((curso) => ({
-                        label: curso.desNombre,
-                        value: String(curso.idCurso),
-                      }))
-                    : ['Cargando cursos...'],
+                  disabled: !alumnoSeleccionado,
+                  options: alumnoSeleccionado
+                    ? cursosDisponibles.length > 0
+                      ? cursosDisponibles.map((curso) => ({
+                          label: curso.desNombre,
+                          value: String(curso.idCurso),
+                        }))
+                      : ['No hay cursos disponibles para este alumno']
+                    : ['Seleccione un alumno primero'],
                 }}
                 value={cursoSeleccionado}
                 onChange={(_, v) => setCursoSeleccionado(v)}
@@ -136,28 +266,24 @@ const page = () => {
 
               <div>
                 <h1 className="text-3xl font-bold uppercase text-black">
-                  [ APELLIDO, NOMBRE DEL ALUMNO ]
+                  {alumnoNombre}
                 </h1>
                 <p className="text-gray-700 font-bold uppercase mt-1">
-                  ID: 2026-AL-042 | Sección: 4to "A"
+                  ID: {progresoAlumno?.alumno.idAlumno ?? '---'} | Sección: {seccionNombre}
                 </p>
+                {alumnoEmail && (
+                  <p className="text-gray-700 uppercase mt-1 text-sm">
+                    {alumnoEmail}
+                  </p>
+                )}
 
                 <div className="flex flex-wrap gap-3 mt-3">
                   <Etiquetas variant="success">Estado: Activo</Etiquetas>
-                  <Etiquetas variant="outline">Última conexión: 12/04/2026</Etiquetas>
+                  <Etiquetas variant="outline">Última conexión: {actividadUltima}</Etiquetas>
                 </div>
               </div>
             </div>
 
-            <div className="mt-2 md:mt-0 flex gap-2">
-              <Boton variant="ghost" size="sm">
-                Mensaje
-              </Boton>
-
-              <Boton variant="primary" size="sm">
-                Reporte PDF
-              </Boton>
-            </div>
           </div>
 
           {errorDetalle && (
@@ -195,44 +321,38 @@ const page = () => {
               </h2>
 
               <div className="border-l-4 border-black ml-4 space-y-8 pb-4">
-                <div className="relative pl-8">
-                  <div className="absolute -left-[26px] top-0 w-10 h-10 bg-white border-4 border-black rounded-full flex items-center justify-center">
-                    <i className="fa-solid fa-check text-sm text-black"></i>
-                  </div>
+                {leccionesDisponibles.length > 0 ? (
+                  leccionesDisponibles.slice(0, 3).map((leccion, index) => (
+                    <div key={`${leccion.idLeccion}-${index}`} className="relative pl-8">
+                      <div className="absolute -left-[26px] top-0 w-10 h-10 bg-white border-4 border-black rounded-full flex items-center justify-center">
+                        <i className={`fa-solid ${leccion.completada ? 'fa-check' : 'fa-spinner animate-spin'} text-sm text-black`}></i>
+                      </div>
 
-                  <div className="bg-white border-2 border-black p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-                    <p className="text-xs font-bold text-gray-600 uppercase">{progresoAlumno ? new Date(progresoAlumno.ultimaActividad).toLocaleDateString('es-PE') : '12 ABR 2026'} - 14:20</p>
-                    <p className="font-bold uppercase text-black">{progresoAlumno ? progresoAlumno.nombreCurso : 'L2: Estructuras de Control'}</p>
-                    <p className="text-xs mt-1 text-gray-700 font-bold uppercase">
-                      Tiempo en lección: 24 min.
-                    </p>
-                  </div>
-                </div>
+                      <div className={`border-2 p-4 ${leccion.completada ? 'bg-white border-black shadow-[4px_4px_0_0_rgba(0,0,0,1)]' : 'bg-gray-100 border-dashed border-gray-400'}`}>
+                        <p className="text-xs font-bold text-gray-600 uppercase">
+                          {leccion.fecCompletado
+                            ? new Date(leccion.fecCompletado).toLocaleDateString('es-PE')
+                            : actividadUltima}
+                        </p>
+                        <p className="font-bold uppercase text-black">{leccion.nombre}</p>
+                        <p className="text-xs mt-1 text-gray-700 font-bold uppercase">
+                          Módulo: {leccion.moduloNombre}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="relative pl-8">
+                    <div className="absolute -left-[26px] top-0 w-10 h-10 bg-gray-200 border-4 border-black border-dashed rounded-full flex items-center justify-center">
+                      <i className="fa-solid fa-hourglass-half text-sm text-black"></i>
+                    </div>
 
-                <div className="relative pl-8">
-                  <div className="absolute -left-[26px] top-0 w-10 h-10 bg-white border-4 border-black rounded-full flex items-center justify-center">
-                    <i className="fa-solid fa-check text-sm text-black"></i>
+                    <div className="bg-gray-100 border-2 border-dashed border-gray-400 p-4">
+                      <p className="text-xs font-bold text-gray-500 uppercase">Sin historial de lecciones</p>
+                      <p className="font-bold uppercase text-gray-700">Seleccione un alumno y curso para ver detalles.</p>
+                    </div>
                   </div>
-
-                  <div className="bg-white border-2 border-black p-4">
-                    <p className="text-xs font-bold text-gray-600 uppercase">10 ABR 2026 - 09:15</p>
-                    <p className="font-bold uppercase text-black">L1: Configuración Entorno</p>
-                    <p className="text-xs mt-1 text-gray-700 font-bold uppercase">
-                      Tiempo en lección: 45 min.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative pl-8">
-                  <div className="absolute -left-[26px] top-0 w-10 h-10 bg-gray-200 border-4 border-black border-dashed rounded-full flex items-center justify-center">
-                    <i className="fa-solid fa-spinner animate-spin text-sm text-black"></i>
-                  </div>
-
-                  <div className="bg-gray-100 border-2 border-dashed border-gray-400 p-4">
-                    <p className="text-xs font-bold text-gray-500 uppercase">En curso</p>
-                    <p className="font-bold uppercase text-gray-700">L3: Programación de Objetos</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -242,48 +362,48 @@ const page = () => {
               </h2>
 
               <div className="space-y-6">
-                <div className="bg-white border-2 border-black overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
-                  <div className="bg-gray-200 p-3 border-b-2 border-black flex justify-between items-center">
-                    <span className="font-bold uppercase text-sm text-black">Examen: Módulo 1</span>
-                    <span className="font-bold text-lg text-black">19 / 20</span>
-                  </div>
+                {evaluaciones.length > 0 ? (
+                  evaluaciones.map((evaluacion, index) => (
+                    <div key={index} className="bg-white border-2 border-black overflow-hidden shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+                      <div className="bg-gray-200 p-3 border-b-2 border-black flex justify-between items-center">
+                        <span className="font-bold uppercase text-sm text-black">Evaluación {index + 1}</span>
+                        <span className="font-bold text-lg text-black">{Object.keys(evaluacion || {}).length ?? 'N/A'}</span>
+                      </div>
 
-                  <div className="p-4">
-                    <p className="text-xs font-bold text-gray-600 uppercase mb-2">
-                      Retroalimentación del Docente
-                    </p>
+                      <div className="p-4">
+                        <p className="text-xs font-bold text-gray-600 uppercase mb-2">
+                          Detalle
+                        </p>
 
-                    <div className="bg-gray-50 border-2 border-dotted border-gray-400 p-3 text-sm italic text-gray-800">
-                      "Excelente dominio de los fundamentos de Java. Demostró claridad en el uso de
-                      variables. Continúa así."
+                        <div className="bg-gray-50 border-2 border-dotted border-gray-400 p-3 text-sm italic text-gray-800">
+                          {typeof evaluacion === 'object' && evaluacion !== null
+                            ? JSON.stringify(evaluacion, null, 2)
+                            : String(evaluacion)}
+                        </div>
+
+                        <div className="mt-4 flex justify-between items-center gap-4">
+                          <span className="text-xs font-bold uppercase text-black">Elemento {index + 1}</span>
+                          <button className="text-xs font-bold uppercase border-b-2 border-black hover:bg-black hover:text-white transition-all px-1 text-black">
+                            Ver detalles
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="bg-white border-2 border-black overflow-hidden opacity-80">
+                    <div className="bg-gray-100 p-3 border-b-2 border-black flex justify-between items-center">
+                      <span className="font-bold uppercase text-sm text-gray-700">Registro de Evaluaciones</span>
                     </div>
 
-                    <div className="mt-4 flex justify-between items-center gap-4">
-                      <span className="text-xs font-bold uppercase text-black">Intentos: 1</span>
-                      <button className="text-xs font-bold uppercase border-b-2 border-black hover:bg-black hover:text-white transition-all px-1 text-black">
-                        Ver Respuestas
-                      </button>
+                    <div className="p-4">
+                      <p className="text-xs font-bold text-gray-600 uppercase mb-2">
+                        No hay evaluaciones registradas.
+                      </p>
+                      <p className="text-sm text-gray-600 italic">Seleccione un curso para cargar el historial de evaluaciones.</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="bg-white border-2 border-black overflow-hidden opacity-80">
-                  <div className="bg-gray-100 p-3 border-b-2 border-black flex justify-between items-center">
-                    <span className="font-bold uppercase text-sm text-gray-700">Test: Lógica Básica</span>
-                    <span className="font-bold text-lg text-gray-700">18 / 20</span>
-                  </div>
-
-                  <div className="p-4">
-                    <p className="text-xs font-bold text-gray-600 uppercase mb-2">
-                      Retroalimentación del Docente
-                    </p>
-                    <p className="text-sm text-gray-600 italic">Sin comentarios registrados.</p>
-
-                    <button className="mt-4 w-full border-2 border-dashed border-black py-2 text-xs font-bold uppercase hover:bg-gray-100 transition-all text-black">
-                      + Agregar Comentario
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="mt-10 bg-white border-2 border-black p-6 relative">

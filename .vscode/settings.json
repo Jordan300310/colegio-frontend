@@ -9,6 +9,7 @@
         "/^Set-Location -Path \"D:\\\\2026-01\\\\capstone proyecto\\\\my-app\"; python -c \"from pathlib import Path; path=Path\\(r'D:\\\\\\\\2026-01\\\\\\\\capstone proyecto\\\\\\\\my-app\\\\\\\\app\\\\\\\\asignacion-docente\\\\\\\\page\\.tsx'\\); lines=path\\.read_text\\(encoding='utf-8'\\)\\.splitlines\\(\\);\nfor i in range\\(410, 430\\):\n    print\\(f'\\{i\\}: \\{lines\\[i-1\\]\\}'\\)\"$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "npm install": true
     }
 }

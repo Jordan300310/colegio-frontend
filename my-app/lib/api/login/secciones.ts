@@ -452,6 +452,37 @@ export async function listarAlumnosSeccionSolicitud(
   return response.json()
 }
 
+export async function listarAlumnosSeccionProfesorSolicitud(
+  idSeccion: number,
+  idProfesor: number,
+  token?: string,
+): Promise<LoginResponse<AlumnoSeccionResponseData[]>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(
+    `${BASE_URL}${SECCIONES_PATH}/${idSeccion}/profesor/${idProfesor}/alumnos`,
+    {
+      method: 'GET',
+      headers,
+    },
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al listar alumnos de la sección por profesor: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
 export async function darBajaAlumnoSeccionSolicitud(
   idSeccion: number,
   idUsuario: number,

@@ -84,10 +84,43 @@ export interface ProgresoAlumnoCursoResponseData {
   evaluaciones: unknown[]
 }
 
+export interface ProgresoNoAvanzanQuery {
+  dias?: number
+  minAvance?: number
+}
+
 export interface ProgresoSeccionQuery {
   page?: number
   size?: number
   sort?: string[]
+}
+
+export async function obtenerProgresoNoAvanzanSolicitud(
+  idSeccion: number,
+  query: ProgresoNoAvanzanQuery = {},
+  token?: string,
+): Promise<LoginResponse<AlumnoProgresoData[]>> {
+  const headers: Record<string, string> = buildHeaders(token)
+  const params = new URLSearchParams()
+
+  if (query.dias !== undefined) params.append('dias', String(query.dias))
+  if (query.minAvance !== undefined) params.append('minAvance', String(query.minAvance))
+
+  const url = `${BASE_URL}${PROGRESO_PATH}/no-avanzan/${idSeccion}${params.toString() ? `?${params.toString()}` : ''}`
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers,
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al obtener alumnos que no avanzan: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
 }
 
 export async function obtenerProgresoSeccionSolicitud(
