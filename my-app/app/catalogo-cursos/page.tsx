@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import CampoSelect from '../componentes/CampoSelect'
@@ -11,6 +12,7 @@ import { CursoDetalleResponseData, listarMisCursosSolicitud } from '../../lib/ap
 const PAGE_SIZE = 6
 
 const Page = () => {
+  const router = useRouter()
   const [cursos, setCursos] = useState<CursoDetalleResponseData[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -217,7 +219,13 @@ const Page = () => {
                         <span>Estado: {curso.estActivo ? 'Activo' : 'Inactivo'}</span>
                       </div>
 
-                      <Boton variant="primary" size="sm" fullWidth className="cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.97]">
+                      <Boton
+                        variant="primary"
+                        size="sm"
+                        fullWidth
+                        className="cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.97]"
+                        onClick={() => router.push(`/curso/${curso.idCurso}`)}
+                      >
                         Ingresar al Curso
                       </Boton>
                     </div>

@@ -3,6 +3,36 @@ import { buildHeaders, LoginResponse } from './auth'
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 const PROGRESO_PATH = '/progreso'
 
+// Valores reales que envía el backend (EstadoModulo.java)
+export type EstadoModulo = 'PENDIENTE' | 'EN_CURSO' | 'COMPLETADO'
+
+export interface ModuloProgresoResponseData {
+  idModulo: number
+  nombre: string
+  estado: EstadoModulo
+  completadas: number
+  total: number
+}
+
+export interface ProgresoCursoResponseData {
+  idCurso: number
+  nombreCurso: string
+  totalLeccionesObligatorias: number
+  leccionesCompletadas: number
+  porcentaje: number
+  ultimaActividad: string | null
+  modulos: ModuloProgresoResponseData[]
+  calificaciones: unknown[]
+}
+
+export interface ProgresoLeccionResponseData {
+  idProgreso: number
+  idLeccion: number
+  nombreLeccion: string
+  estCompletada: boolean
+  fecCompletado: string | null
+}
+
 export interface AlumnoProgresoData {
   idAlumno: number
   nombres: string
@@ -93,6 +123,46 @@ export interface ProgresoSeccionQuery {
   page?: number
   size?: number
   sort?: string[]
+}
+
+export async function obtenerMiProgresoSolicitud(
+  token?: string,
+): Promise<LoginResponse<ProgresoCursoResponseData[]>> {
+  const response = await fetch(`${BASE_URL}${PROGRESO_PATH}/mi-progreso`, {
+    method: 'GET',
+    headers: buildHeaders(token),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al obtener mi progreso: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
+}
+
+export async function completarLeccionSolicitud(
+  idLeccion: number,
+  token?: string,
+): Promise<LoginResponse<ProgresoLeccionResponseData>> {
+  const response = await fetch(
+    `${BASE_URL}${PROGRESO_PATH}/leccion/${idLeccion}/completar`,
+    {
+      method: 'POST',
+      headers: buildHeaders(token),
+    },
+  )
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(
+      `Error al completar lección: ${response.status} ${response.statusText} - ${errorText}`,
+    )
+  }
+
+  return response.json()
 }
 
 export async function obtenerProgresoNoAvanzanSolicitud(

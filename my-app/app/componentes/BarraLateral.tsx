@@ -12,9 +12,7 @@ const NAV_POR_ROL: Record<string, NavItem[]> = {
     ROL_ALUMNO: [
         { href: '/perfil', label: 'Perfil' },
         { href: '/dashboard-alumno', label: 'Dashboard' },
-        { href: '/catalogo-cursos', label: 'Catálogo de Cursos' },
-        { href: '/visor-lecciones', label: 'Visor de Lecciones' },
-        { href: '/sala-evaluacion', label: 'Sala de Evaluación' },
+        { href: '/catalogo-cursos', label: 'Mis Cursos' },
     ],
     ROL_PROFESOR: [
         { href: '/perfil', label: 'Perfil' },
