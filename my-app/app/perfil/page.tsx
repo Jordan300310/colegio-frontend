@@ -1,55 +1,125 @@
-import React from 'react'
+'use client'
+
+import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
 import CampoTexto from '../componentes/CampoTexto'
 import Etiquetas from '../componentes/Etiquetas'
+import BarraLateral from '../componentes/BarraLateral'
+import { obtenerUsuarioMeSolicitud, UsuarioRolResponseData } from '../../lib/api/login/usuarios'
+import { cambiarContrasenaSolicitud } from '../../lib/api/login/auth'
+
+const ETIQUETAS_ROL: Record<string, string> = {
+  ROL_ADMIN: 'Administrador',
+  ROL_PROFESOR: 'Docente',
+  ROL_ALUMNO: 'Alumno',
+}
+
+function getTokenYId(): { token: string; idUsuario: number } | null {
+  try {
+    const token =
+      sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+    const raw =
+      sessionStorage.getItem('usuario') ?? localStorage.getItem('usuario') ?? ''
+    const u = JSON.parse(raw) as { id?: number }
+    if (!token || !u.id) return null
+    return { token, idUsuario: u.id }
+  } catch {
+    return null
+  }
+}
+
+function validarContrasena(pwd: string) {
+  return {
+    min8: pwd.length >= 8,
+    mayus: /[A-Z]/.test(pwd),
+    numero: /[0-9]/.test(pwd),
+    simbolo: /[@#$%^&*!?.,;:_\-+=|~`'"<>{}()[\]\\/]/.test(pwd),
+  }
+}
 
 const page = () => {
+  const [usuario, setUsuario] = useState<UsuarioRolResponseData | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [errorCarga, setErrorCarga] = useState('')
+
+  // Seguridad y Acceso
+  const [contrasenaActual, setContrasenaActual] = useState('')
+  const [nuevaContrasena, setNuevaContrasena] = useState('')
+  const [confirmarContrasena, setConfirmarContrasena] = useState('')
+  const [loadingPwd, setLoadingPwd] = useState(false)
+  const [errorPwd, setErrorPwd] = useState('')
+  const [errorNueva, setErrorNueva] = useState('')
+  const [successPwd, setSuccessPwd] = useState('')
+
+  const validacion = validarContrasena(nuevaContrasena)
+
+  const handleCambiarContrasena = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setErrorPwd('')
+    setErrorNueva('')
+    setSuccessPwd('')
+
+    if (!contrasenaActual.trim()) {
+      setErrorPwd('Ingresa tu contraseña actual.')
+      return
+    }
+    if (!validacion.min8 || !validacion.mayus || !validacion.numero || !validacion.simbolo) {
+      setErrorNueva('La nueva contraseña no cumple todos los requisitos de seguridad.')
+      return
+    }
+    if (nuevaContrasena !== confirmarContrasena) {
+      setErrorPwd('La nueva contraseña y la confirmación no coinciden.')
+      return
+    }
+
+    const auth = getTokenYId()
+    const token = auth?.token ?? ''
+
+    try {
+      setLoadingPwd(true)
+      await cambiarContrasenaSolicitud(
+        { contrasenaActual, nuevaContrasena, confirmarContrasena },
+        token,
+      )
+      setSuccessPwd('Contraseña actualizada correctamente.')
+      setContrasenaActual('')
+      setNuevaContrasena('')
+      setConfirmarContrasena('')
+    } catch (err) {
+      setErrorPwd(err instanceof Error ? err.message : 'Error al actualizar la contraseña.')
+    } finally {
+      setLoadingPwd(false)
+    }
+  }
+
+  useEffect(() => {
+    const auth = getTokenYId()
+    if (!auth) {
+      setErrorCarga('No se encontró sesión activa.')
+      setCargando(false)
+      return
+    }
+
+    obtenerUsuarioMeSolicitud(auth.token)
+      .then((res) => {
+        const datos = (res.datos ?? res) as UsuarioRolResponseData
+        if (datos?.idUsuario) {
+          setUsuario(datos)
+        } else {
+          setErrorCarga('No se pudieron cargar los datos del perfil.')
+        }
+      })
+      .catch((err: unknown) => {
+        setErrorCarga(err instanceof Error ? err.message : 'Error al cargar perfil.')
+      })
+      .finally(() => setCargando(false))
+  }, [])
+
+  const rolLabel = usuario ? (ETIQUETAS_ROL[usuario.rol] ?? usuario.rol) : '—'
+
   return (
     <>
-      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex z-10">
-        <div className="p-6 border-b-2 border-black flex items-center space-x-3">
-          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">
-            L
-          </div>
-          <span className="text-xl font-bold uppercase tracking-widest">[ LOGO ]</span>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-4 mt-6">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-house w-5"></i>
-            <span>Inicio</span>
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center space-x-3 bg-gray-200 border-2 border-black text-black px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(0,0,0,1)]"
-          >
-            <i className="fa-solid fa-id-badge w-5"></i>
-            <span>Mi Perfil</span>
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-gear w-5"></i>
-            <span>Preferencias</span>
-          </a>
-        </nav>
-
-        <div className="p-4 border-t-2 border-black">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-600 hover:text-black px-4 py-2"
-          >
-            <i className="fa-solid fa-arrow-right-from-bracket w-5"></i>
-            <span className="uppercase font-bold text-sm">Cerrar Sesión</span>
-          </a>
-        </div>
-      </aside>
+      <BarraLateral />
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
         <header className="md:hidden bg-white border-b-2 border-black p-4 flex justify-between items-center">
@@ -69,11 +139,11 @@ const page = () => {
             </div>
 
             <div className="hidden sm:block">
-              <Etiquetas variant="outline">Rol: Administrador / Docente</Etiquetas>
+              <Etiquetas variant="outline">Rol: {rolLabel}</Etiquetas>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-12">
+          <div className="grid grid-cols-1 gap-10 mb-12">
             <div className="bg-white border-2 border-black p-8 shadow-[8px_8px_0_0_rgba(0,0,0,1)] relative">
               <div className="absolute -top-4 -left-4 bg-white border-2 border-black px-4 py-1 text-sm font-bold uppercase z-10 text-gray-800">
                 Información Personal
@@ -92,6 +162,12 @@ const page = () => {
                 </div>
               </div>
 
+              {cargando && (
+                <p className="text-xs font-bold uppercase text-gray-500 mb-4">Cargando datos...</p>
+              )}
+              {errorCarga && (
+                <p className="text-xs font-bold uppercase text-red-600 mb-4">{errorCarga}</p>
+              )}
               <form className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CampoTexto
@@ -101,7 +177,8 @@ const page = () => {
                       label: 'Nombres',
                       placeholder: 'Ej. Juan José',
                     }}
-                    value="JUAN JOSÉ"
+                    value={usuario?.nombres ?? ''}
+                    onChange={() => {}}
                   />
 
                   <CampoTexto
@@ -111,38 +188,25 @@ const page = () => {
                       label: 'Apellidos',
                       placeholder: 'Ej. Pérez Soto',
                     }}
-                    value="[ APELLIDOS ]"
+                    value={usuario?.apellidos ?? ''}
+                    onChange={() => {}}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">
-                    Correo Electrónico
-                  </label>
-                  <input
-                    type="email"
-                    value="juan.jose@colegio.edu.pe"
-                    disabled
-                    className="w-full border-2 border-dashed border-gray-400 p-3 font-bold text-gray-600 bg-gray-100 cursor-not-allowed outline-none"
+                  <CampoTexto
+                    field={{
+                      type: 'email',
+                      name: 'correo',
+                      label: 'Correo Electrónico',
+                      disabled: true,
+                    }}
+                    value={usuario?.correo ?? ''}
+                    onChange={() => {}}
                   />
                   <p className="text-[10px] text-gray-500 font-bold uppercase mt-2 text-right">
                     Contacte a soporte para modificar su correo.
                   </p>
-                </div>
-
-                <CampoTexto
-                  field={{
-                    type: 'text',
-                    name: 'telefono',
-                    label: 'Teléfono / Celular (Opcional)',
-                    placeholder: 'Ej. 999 888 777',
-                  }}
-                />
-
-                <div className="pt-4 border-t-2 border-dashed border-gray-300">
-                  <Boton variant="ghost" size="md" fullWidth>
-                    Guardar Datos Personales
-                  </Boton>
                 </div>
               </form>
             </div>
@@ -152,7 +216,7 @@ const page = () => {
                 Seguridad y Acceso
               </div>
 
-              <div className="mb-6 mt-4 p-4 border-2 border-black bg-white flex items-start space-x-3">
+              {/* <div className="mb-6 mt-4 p-4 border-2 border-black bg-white flex items-start space-x-3">
                 <i className="fa-solid fa-circle-info text-xl pt-1 text-black"></i>
                 <div>
                   <p className="text-sm font-bold uppercase text-black">
@@ -162,69 +226,61 @@ const page = () => {
                     Hace 3 meses (15 Enero 2026)
                   </p>
                 </div>
-              </div>
+              </div> */}
 
-              <form className="space-y-5">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">
-                    Contraseña Actual
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      className="w-full border-2 border-black p-3 pr-10 font-bold bg-white text-gray-800 placeholder:text-gray-400 focus:bg-gray-50 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
-                      title="Mostrar u ocultar contraseña"
-                    >
-                      <i className="fa-regular fa-eye"></i>
-                    </button>
-                  </div>
-                </div>
+              <form className="space-y-5" onSubmit={handleCambiarContrasena}>
+                {errorPwd && (
+                  <p className="text-xs font-bold uppercase text-red-600">{errorPwd}</p>
+                )}
+                {successPwd && (
+                  <p className="text-xs font-bold uppercase text-green-600">{successPwd}</p>
+                )}
+
+                <CampoTexto
+                    field={{
+                      type: 'password',
+                      name: 'contrasenaActual',
+                      label: 'Contraseña Actual',
+                      placeholder: '••••••••',
+                    }}
+                    value={contrasenaActual}
+                    onChange={(_, v) => setContrasenaActual(v)}
+                  />
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">
-                    Nueva Contraseña
-                  </label>
-
-                  <div className="relative mb-3">
-                    <input
-                      type="password"
-                      placeholder="••••••••"
-                      className="w-full border-2 border-black p-3 pr-10 font-bold bg-white text-gray-800 placeholder:text-gray-400 focus:bg-gray-50 focus:outline-none"
+                  <CampoTexto
+                      field={{
+                        type: 'password',
+                        name: 'nuevaContrasena',
+                        label: 'Nueva Contraseña',
+                        placeholder: '••••••••',
+                      }}
+                      value={nuevaContrasena}
+                      onChange={(_, v) => { setNuevaContrasena(v); setErrorNueva('') }}
                     />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black"
-                      title="Mostrar u ocultar contraseña"
-                    >
-                      <i className="fa-regular fa-eye"></i>
-                    </button>
-                  </div>
+                  {errorNueva && (
+                    <p className="text-xs font-bold uppercase text-red-600 mt-2">{errorNueva}</p>
+                  )}
 
-                  <div className="bg-white border-2 border-dashed border-gray-400 p-3">
+                  <div className="bg-white border-2 border-dashed border-gray-400 p-3 mt-3">
                     <p className="text-xs font-bold text-gray-700 uppercase mb-2 border-b-2 border-gray-200 pb-1">
                       Requisitos de seguridad
                     </p>
-
                     <ul className="text-xs font-bold uppercase space-y-1">
-                      <li className="text-green-600">
-                        <i className="fa-solid fa-check mr-2"></i>
+                      <li className={validacion.min8 ? 'text-green-600' : 'text-gray-500'}>
+                        <i className={`fa-solid ${validacion.min8 ? 'fa-check' : 'fa-xmark'} mr-2`}></i>
                         Mínimo 8 caracteres
                       </li>
-                      <li className="text-gray-500">
-                        <i className="fa-solid fa-xmark mr-2"></i>
+                      <li className={validacion.mayus ? 'text-green-600' : 'text-gray-500'}>
+                        <i className={`fa-solid ${validacion.mayus ? 'fa-check' : 'fa-xmark'} mr-2`}></i>
                         Al menos una mayúscula
                       </li>
-                      <li className="text-gray-500">
-                        <i className="fa-solid fa-xmark mr-2"></i>
+                      <li className={validacion.numero ? 'text-green-600' : 'text-gray-500'}>
+                        <i className={`fa-solid ${validacion.numero ? 'fa-check' : 'fa-xmark'} mr-2`}></i>
                         Al menos un número
                       </li>
-                      <li className="text-gray-500">
-                        <i className="fa-solid fa-xmark mr-2"></i>
+                      <li className={validacion.simbolo ? 'text-green-600' : 'text-gray-500'}>
+                        <i className={`fa-solid ${validacion.simbolo ? 'fa-check' : 'fa-xmark'} mr-2`}></i>
                         Un símbolo especial (@, #, $, etc.)
                       </li>
                     </ul>
@@ -232,22 +288,24 @@ const page = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-widest text-gray-800 mb-2">
-                    Confirmar Nueva Contraseña
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full border-2 border-black p-3 font-bold bg-white text-gray-800 placeholder:text-gray-400 focus:bg-gray-50 focus:outline-none"
-                  />
+                  <CampoTexto
+                      field={{
+                        type: 'password',
+                        name: 'confirmarContrasena',
+                        label: 'Confirmar Nueva Contraseña',
+                        placeholder: '••••••••',
+                      }}
+                      value={confirmarContrasena}
+                      onChange={(_, v) => setConfirmarContrasena(v)}
+                    />
                   <p className="text-[10px] font-bold uppercase mt-2 text-gray-500">
                     La nueva contraseña debe coincidir con la confirmación.
                   </p>
                 </div>
 
                 <div className="pt-4 border-t-2 border-black mt-6">
-                  <Boton variant="primary" size="md" fullWidth>
-                    Actualizar Contraseña
+                  <Boton type="submit" variant="primary" size="md" fullWidth disabled={loadingPwd}>
+                    {loadingPwd ? 'Actualizando...' : 'Actualizar Contraseña'}
                   </Boton>
                 </div>
               </form>

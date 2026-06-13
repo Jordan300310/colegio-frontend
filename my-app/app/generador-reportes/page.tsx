@@ -1,6 +1,33 @@
-import React from 'react'
+"use client"
+
+import React, { useEffect, useState } from 'react'
 import Boton from '../componentes/Boton'
+import CampoSelect from '../componentes/CampoSelect'
+import { CampoFormularioField } from '../componentes/CampoFormulario.types'
+import CampoTexto from '../componentes/CampoTexto'
 import Tabla, { TablaColumn, TablaRow } from '../componentes/Tabla'
+import BarraLateral from '../componentes/BarraLateral'
+import {
+  listarSeccionesProfesorSeccionSolicitud,
+  listarAlumnosSeccionSolicitud,
+  ProfesorSeccionResponseData,
+  AlumnoSeccionResponseData,
+} from '../../lib/api/login/secciones'
+import {
+  obtenerReporteGrupalExcel,
+  obtenerReporteGrupalPdf,
+  obtenerReporteIndividualExcel,
+  obtenerReporteIndividualPdf,
+} from '../../lib/api/login/reportes'
+
+const PAGE_SIZE = 10
+
+type ReporteRecienteData = {
+  id: number
+  fecha: string
+  tipoFiltro: string
+  usuario: string
+}
 
 const columnas: TablaColumn[] = [
   { key: 'fecha', label: 'Fecha' },
@@ -8,60 +35,230 @@ const columnas: TablaColumn[] = [
   { key: 'usuario', label: 'Usuario' },
 ]
 
-const filas: TablaRow[] = [
+const filasDatos: ReporteRecienteData[] = [
   {
     id: 1,
-    fecha: <span className="font-bold italic text-black">13/04/2026</span>,
-    tipoFiltro: <span className="font-bold uppercase text-black">Grupal - Secc. 4to "A"</span>,
-    usuario: <span className="font-bold uppercase text-black">Prof. [Nombre]</span>,
+    fecha: '13/04/2026',
+    tipoFiltro: 'Grupal - Secc. 4to "A"',
+    usuario: 'Prof. [Nombre]',
   },
   {
     id: 2,
-    fecha: <span className="font-bold italic text-black">12/04/2026</span>,
-    tipoFiltro: <span className="font-bold uppercase text-black">Individual - Alumno [X]</span>,
-    usuario: <span className="font-bold uppercase text-black">Admin [Juan J.]</span>,
+    fecha: '12/04/2026',
+    tipoFiltro: 'Individual - Alumno [X]',
+    usuario: 'Admin [Juan J.]',
   },
 ]
 
 const page = () => {
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState('')
+  const [filtroUsuario, setFiltroUsuario] = useState('')
+  const [filtroSeccion, setFiltroSeccion] = useState('')
+  const [filtroAlumno, setFiltroAlumno] = useState('')
+  const [paginaActual, setPaginaActual] = useState(0)
+  const [secciones, setSecciones] = useState<ProfesorSeccionResponseData[]>([])
+  const [alumnos, setAlumnos] = useState<AlumnoSeccionResponseData[]>([])
+  const [loadingSecciones, setLoadingSecciones] = useState(false)
+  const [loadingAlumnos, setLoadingAlumnos] = useState(false)
+  const [seccionesError, setSeccionesError] = useState('')
+  const [alumnosError, setAlumnosError] = useState('')
+
+  const tiposDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.tipoFiltro)))
+  const usuariosDisponibles = Array.from(new Set(filasDatos.map((fila) => fila.usuario)))
+  const seccionSeleccionada = secciones.find((sec) => String(sec.idSeccion) === filtroSeccion)
+
+  const seccionOptions = loadingSecciones
+    ? ['Cargando...']
+    : secciones.map((seccion) => ({
+        label: `${seccion.nombreSeccion} - ${seccion.valAnio}`,
+        value: String(seccion.idSeccion),
+      }))
+
+  const alumnoOptions = loadingAlumnos
+    ? ['Cargando...']
+    : alumnos.map((alumno) => ({
+        label: `${alumno.desApellidos}, ${alumno.desNombres}`,
+        value: String(alumno.idUsuario),
+      }))
+
+  const alumnoField: CampoFormularioField = {
+    type: 'select',
+    name: 'alumnoEspecifico',
+    label: 'Alumno Específico (Opcional)',
+    disabled: !filtroSeccion || loadingAlumnos,
+    options: alumnoOptions,
+  }
+
+  const filasFiltradas = filasDatos.filter((fila) => {
+    const term = busqueda.trim().toLowerCase()
+    const matchesTexto =
+      term === '' ||
+      fila.fecha.toLowerCase().includes(term) ||
+      fila.tipoFiltro.toLowerCase().includes(term) ||
+      fila.usuario.toLowerCase().includes(term)
+
+    const matchesTipo = filtroTipo === '' || fila.tipoFiltro === filtroTipo
+    const matchesUsuario = filtroUsuario === '' || fila.usuario === filtroUsuario
+    const matchesSeccion =
+      filtroSeccion === '' ||
+      (seccionSeleccionada ? fila.tipoFiltro.includes(seccionSeleccionada.nombreSeccion) : true)
+
+    return matchesTexto && matchesTipo && matchesUsuario && matchesSeccion
+  })
+
+  const totalElementos = filasFiltradas.length
+  const totalPaginas = Math.max(1, Math.ceil(totalElementos / PAGE_SIZE))
+  const inicio = totalElementos === 0 ? 0 : paginaActual * PAGE_SIZE + 1
+  const fin = Math.min((paginaActual + 1) * PAGE_SIZE, totalElementos)
+
+  const filasPaginadas = filasFiltradas
+    .slice(paginaActual * PAGE_SIZE, paginaActual * PAGE_SIZE + PAGE_SIZE)
+    .map((fila) => ({
+      ...fila,
+      fecha: <span className="font-bold italic text-black">{fila.fecha}</span>,
+      tipoFiltro: <span className="font-bold uppercase text-black">{fila.tipoFiltro}</span>,
+      usuario: <span className="font-bold uppercase text-black">{fila.usuario}</span>,
+    }))
+
+  const paginasVisibles = (() => {
+    const total = Math.max(0, totalPaginas)
+    const maxVisible = 10
+
+    if (total <= maxVisible) {
+      return Array.from({ length: total }, (_, i) => i)
+    }
+
+    const mitad = Math.floor(maxVisible / 2)
+    let start = Math.max(0, paginaActual - mitad)
+    let end = Math.min(total - 1, start + maxVisible - 1)
+    start = Math.max(0, end - maxVisible + 1)
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i)
+  })()
+
+  const getToken = () => {
+    if (typeof window === 'undefined') return ''
+    return sessionStorage.getItem('token') ?? localStorage.getItem('token') ?? ''
+  }
+
+  const cargarSecciones = async () => {
+    setLoadingSecciones(true)
+    setSeccionesError('')
+
+    try {
+      const response = await listarSeccionesProfesorSeccionSolicitud({}, getToken())
+      setSecciones(response.datos ?? [])
+    } catch (error) {
+      setSeccionesError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar las secciones disponibles.',
+      )
+      setSecciones([])
+    } finally {
+      setLoadingSecciones(false)
+    }
+  }
+
+  const cargarAlumnos = async (idSeccion: number) => {
+    setLoadingAlumnos(true)
+    setAlumnosError('')
+
+    try {
+      const response = await listarAlumnosSeccionSolicitud(idSeccion, getToken())
+      setAlumnos(response.datos ?? [])
+    } catch (error) {
+      setAlumnosError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cargar los alumnos de la sección.',
+      )
+      setAlumnos([])
+    } finally {
+      setLoadingAlumnos(false)
+    }
+  }
+
+  useEffect(() => {
+    if (filtroSeccion) {
+      setFiltroAlumno('')
+      cargarAlumnos(Number(filtroSeccion))
+    } else {
+      setAlumnos([])
+      setFiltroAlumno('')
+      setAlumnosError('')
+    }
+  }, [filtroSeccion])
+
+  const descargarBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = filename
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadReporte = async (formato: 'pdf' | 'excel') => {
+    if (!filtroSeccion) {
+      alert('Seleccione primero una sección.')
+      return
+    }
+
+    try {
+      const idSeccion = Number(filtroSeccion)
+      const filenameBase = filtroAlumno
+        ? `reporte-individual-alumno-${filtroAlumno}-curso-${seccionSeleccionada?.idCurso ?? '0'}`
+        : `reporte-grupal-seccion-${idSeccion}`
+      const extension = formato === 'pdf' ? 'pdf' : 'xlsx'
+      let blob: Blob
+
+      if (filtroAlumno) {
+        const idAlumno = Number(filtroAlumno)
+        if (formato === 'pdf') {
+          blob = await obtenerReporteIndividualPdf(idAlumno, seccionSeleccionada?.idCurso ?? 0, getToken())
+        } else {
+          blob = await obtenerReporteIndividualExcel(idAlumno, seccionSeleccionada?.idCurso ?? 0, getToken())
+        }
+      } else {
+        if (formato === 'pdf') {
+          blob = await obtenerReporteGrupalPdf(idSeccion, getToken())
+        } else {
+          blob = await obtenerReporteGrupalExcel(idSeccion, getToken())
+        }
+      }
+
+      descargarBlob(blob, `${filenameBase}.${extension}`)
+    } catch (error) {
+      console.error('Error al descargar el reporte:', error)
+      alert(
+        `No se pudo descargar el reporte.${
+          error instanceof Error ? ` ${error.message}` : ''
+        }`,
+      )
+    }
+  }
+
+  useEffect(() => {
+    cargarSecciones()
+  }, [])
+
+  const handleBuscar = () => {
+    setPaginaActual(0)
+  }
+
+  const handlePageClick = (pagina: number) => {
+    if (pagina !== paginaActual) {
+      setPaginaActual(pagina)
+    }
+  }
+
   return (
     <>
-      <aside className="w-64 bg-white border-r-2 border-black flex flex-col hidden md:flex">
-        <div className="p-6 border-b-2 border-black flex items-center space-x-3">
-          <div className="w-8 h-8 border-2 border-black flex items-center justify-center font-bold">
-            L
-          </div>
-          <span className="text-xl font-bold uppercase tracking-widest text-black">[ LOGO ]</span>
-        </div>
-
-        <nav className="flex-1 px-4 space-y-4 mt-6">
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-700 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-house"></i>
-            <span>Inicio</span>
-          </a>
-
-          <div className="h-0.5 bg-gray-300 w-full my-4"></div>
-
-          <a
-            href="#"
-            className="flex items-center space-x-3 bg-black text-white px-4 py-3 font-bold shadow-[4px_4px_0_0_rgba(156,163,175,1)]"
-          >
-            <i className="fa-solid fa-file-export"></i>
-            <span>Generar Reportes</span>
-          </a>
-
-          <a
-            href="#"
-            className="flex items-center space-x-3 text-gray-700 hover:text-black px-4 py-2 border-2 border-transparent hover:border-dashed hover:border-gray-400"
-          >
-            <i className="fa-solid fa-clock-rotate-left"></i>
-            <span>Historial</span>
-          </a>
-        </nav>
-      </aside>
+      <BarraLateral />
 
       <main className="flex-1 flex flex-col h-screen overflow-y-auto bg-gray-50">
         <div className="p-8 max-w-5xl mx-auto w-full pb-20">
@@ -82,73 +279,43 @@ const page = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
-                  Sección / Grupo
+                  Sección
                 </label>
-                <select className="w-full border-2 border-black p-3 font-bold uppercase bg-gray-100 focus:bg-white focus:outline-none text-black">
-                  <option>[ Todas las Secciones ]</option>
-                  <option>4to "A" - Primer Semestre</option>
-                  <option>5to "B" - Segundo Semestre</option>
-                </select>
+                <CampoSelect
+                  field={{
+                    type: 'select',
+                    name: 'seccionGrupo',
+                    label: 'Sección / Grupo',
+                    options: seccionOptions,
+                  }}
+                  value={filtroSeccion}
+                  onChange={(_: string, value: string) => setFiltroSeccion(value)}
+                />
+                {seccionesError && (
+                  <p className="text-xs text-red-600 font-bold uppercase mt-2">
+                    {seccionesError}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
                   Alumno Específico (Opcional)
                 </label>
-                <select className="w-full border-2 border-black p-3 font-bold uppercase bg-gray-100 focus:bg-white focus:outline-none text-black">
-                  <option>[ Todos los Alumnos ]</option>
-                  <option>Apellido, Nombre 1</option>
-                  <option>Apellido, Nombre 2</option>
-                </select>
+                <CampoSelect
+                  field={alumnoField}
+                  value={filtroAlumno}
+                  onChange={(_: string, value: string) => setFiltroAlumno(value)}
+                />
+                {alumnosError && (
+                  <p className="text-xs text-red-600 font-bold uppercase mt-2">
+                    {alumnosError}
+                  </p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
-                  Fecha de Inicio
-                </label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/AAAA"
-                  defaultValue="01/01/2026"
-                  className="w-full border-2 border-black p-3 font-bold uppercase text-black focus:outline-none bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase mb-2 tracking-widest text-gray-800">
-                  Fecha de Fin
-                </label>
-                <input
-                  type="text"
-                  placeholder="DD/MM/AAAA"
-                  defaultValue="13/04/2026"
-                  className="w-full border-2 border-black p-3 font-bold uppercase text-black focus:outline-none bg-white"
-                />
-              </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t-2 border-dashed border-gray-300 space-y-3 text-black">
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  defaultChecked
-                  className="w-5 h-5 accent-black border-2 border-black"
-                />
-                <span className="text-sm font-bold uppercase text-black">
-                  Incluir gráficas de rendimiento
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  className="w-5 h-5 accent-black border-2 border-black"
-                />
-                <span className="text-sm font-bold uppercase text-black">
-                  Incluir historial de intentos de examen
-                </span>
-              </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
@@ -162,7 +329,13 @@ const page = () => {
                 Ideal para informes impresos y evidencias oficiales.
               </p>
 
-              <Boton variant="wire" size="md" fullWidth>
+              <Boton
+                variant="wire"
+                size="md"
+                fullWidth
+                onClick={() => handleDownloadReporte('pdf')}
+                disabled={!filtroSeccion}
+              >
                 Descargar .PDF
               </Boton>
             </div>
@@ -177,34 +350,18 @@ const page = () => {
                 Ideal para análisis estadístico y manipulación de datos.
               </p>
 
-              <Boton variant="wire" size="md" fullWidth>
+              <Boton
+                variant="wire"
+                size="md"
+                fullWidth
+                onClick={() => handleDownloadReporte('excel')}
+                disabled={!filtroSeccion}
+              >
                 Descargar .XLSX
               </Boton>
             </div>
           </div>
 
-          <h2 className="text-xl font-bold uppercase mb-4 bg-black text-white inline-block px-3 py-1">
-            Reportes Generados Recientemente
-          </h2>
-
-          <div className="bg-white border-2 border-black overflow-x-auto mb-12 shadow-[8px_8px_0_0_rgba(0,0,0,1)]">
-            <Tabla
-              columns={columnas}
-              rows={filas}
-              renderAction={() => (
-                <Boton variant="ghost" size="sm">
-                  Re-descargar
-                </Boton>
-              )}
-              className="max-w-none mx-0 space-y-0"
-            />
-          </div>
-
-          <div className="border-2 border-dashed border-gray-400 p-4 bg-gray-50 text-xs font-bold text-gray-600 uppercase leading-relaxed">
-            Nota: la generación de archivos puede apoyarse en librerías especializadas para PDF y
-            Excel. Si el volumen de datos es alto, se recomienda procesar estas solicitudes de
-            forma asíncrona.
-          </div>
         </div>
       </main>
     </>
