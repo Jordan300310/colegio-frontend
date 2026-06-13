@@ -31,21 +31,26 @@ const CampoRadio: React.FC<CampoRadioProps> = ({ field, value = '', onChange }) 
         {field.label}
       </span>
       <div className={`grid gap-3 ${columnClasses}`}>
-        {field.options?.map((option) => (
-          <label key={option} className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name={field.name}
-              value={option}
-              defaultChecked={onChange ? undefined : value === option}
-              checked={onChange ? value === option : undefined}
-              disabled={field.disabled}
-              onChange={handleChange}
-              className="w-4 h-4 accent-black border-2 border-black"
-            />
-            <span className="text-xs text-background font-bold uppercase">{option}</span>
-          </label>
-        ))}
+        {field.options?.map((option) => {
+          const optionValue = typeof option === 'string' ? option : option.value
+          const optionLabel = typeof option === 'string' ? option : option.label
+
+          return (
+            <label key={optionValue} className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name={field.name}
+                value={optionValue}
+                defaultChecked={onChange ? undefined : value === optionValue}
+                checked={onChange ? value === optionValue : undefined}
+                disabled={field.disabled}
+                onChange={handleChange}
+                className="w-4 h-4 accent-black border-2 border-black"
+              />
+              <span className="text-xs text-background font-bold uppercase">{optionLabel}</span>
+            </label>
+          )
+        })}
       </div>
     </div>
   )

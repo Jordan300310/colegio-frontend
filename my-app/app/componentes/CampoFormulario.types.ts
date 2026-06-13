@@ -10,13 +10,20 @@ export type CampoFormularioFieldType =
   | 'checkbox'
   | 'radio'
 
+export type CampoOption =
+  | string
+  | {
+      label: string
+      value: string
+    }
+
 export interface CampoFormularioField {
   type: CampoFormularioFieldType
   name: string
   label: string
   placeholder?: string
   icon?: string
-  options?: string[]
+  options?: CampoOption[]
   cols?: number
   disabled?: boolean
 }
